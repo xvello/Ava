@@ -22,7 +22,7 @@ class AssetWakeWordProvider(val assets: AssetManager, val path: String = DEFAULT
 
                 runCatching {
                     val json =
-                        assets.open(path + "/" + asset).bufferedReader().use { it.readText() }
+                        assets.open("$path/$asset").bufferedReader().use { it.readText() }
                     val wakeWord: WakeWord =
                         gson.fromJson(json, object : TypeToken<WakeWord>() {}.type)
                     add(WakeWordWithId(asset.substring(0, asset.lastIndexOf(".json")), wakeWord))
@@ -35,7 +35,7 @@ class AssetWakeWordProvider(val assets: AssetManager, val path: String = DEFAULT
     }
 
     override fun loadWakeWordModel(model: String): ByteBuffer {
-        val modelFileDescriptor = assets.openFd(path + "/" + model)
+        val modelFileDescriptor = assets.openFd("$path/$model")
         modelFileDescriptor.use {
             FileInputStream(it.fileDescriptor).use {
                 val fileChannel = it.channel
@@ -47,7 +47,7 @@ class AssetWakeWordProvider(val assets: AssetManager, val path: String = DEFAULT
     }
 
     companion object {
-        private const val TAG = "AssetWakewordProvider"
-        const val DEFAULT_WAKE_WORD_PATH = "wakewords"
+        private const val TAG = "AssetWakeWordProvider"
+        const val DEFAULT_WAKE_WORD_PATH = "wakeWords"
     }
 }
