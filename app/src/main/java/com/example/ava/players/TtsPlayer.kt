@@ -30,6 +30,8 @@ class TtsPlayer(context: Context) : MediaPlayer, AutoCloseable {
     val played: Boolean
         get() = _played
 
+    val isPlaying get() = player.isPlaying
+
     override var volume
         get() = player.volume
         set(value) {
@@ -50,9 +52,7 @@ class TtsPlayer(context: Context) : MediaPlayer, AutoCloseable {
     }
 
     fun runStopped() {
-        _played = false
-        ttsUrl = null
-        onCompletion = null
+        this.onCompletion = null
         player.stop()
     }
 
