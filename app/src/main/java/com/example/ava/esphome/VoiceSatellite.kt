@@ -3,10 +3,8 @@ package com.example.ava.esphome
 import android.Manifest
 import android.util.Log
 import androidx.annotation.RequiresPermission
-import com.example.ava.audio.MicrophoneInput
 import com.example.ava.esphome.entities.Entity
 import com.example.ava.esphome.entities.MediaPlayerEntity
-import com.example.ava.microwakeword.WakeWordDetector
 import com.example.ava.microwakeword.WakeWordProvider
 import com.example.ava.players.TtsPlayer
 import com.example.ava.preferences.VoiceSatelliteSettings
@@ -22,19 +20,15 @@ import com.example.esphomeproto.voiceAssistantAudio
 import com.example.esphomeproto.voiceAssistantConfigurationResponse
 import com.example.esphomeproto.voiceAssistantRequest
 import com.example.esphomeproto.voiceAssistantWakeWord
-import com.google.protobuf.ByteString
 import com.google.protobuf.GeneratedMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.yield
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
 class VoiceSatellite(
@@ -50,30 +44,24 @@ class VoiceSatellite(
     createDeviceInfo(settings),
     listOf<Entity>(MediaPlayerEntity(ttsPlayer))
 ) {
-    private val wakeWordDetector = WakeWordDetector(wakeWordProvider).apply {
+    private val audioInput = VoiceSatelliteAudioInput(wakeWordProvider, stopWordProvider).apply {
         activeWakeWords = listOf(settings.wakeWord)
-    }
-
-    private val stopWordDetector = WakeWordDetector(stopWordProvider).apply {
-        // Currently only detects the first available stop word.
-        // TODO make this configurable
-        activeWakeWords = stopWordProvider.getWakeWords()
+        activeStopWords = stopWordProvider.getWakeWords()
             .take(1)
             .map { it.id }
     }
 
     private var continueConversation = false
-    private val isStreaming = AtomicBoolean(false)
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun start() {
         super.start()
-        startMicrophoneInput()
+        startAudioInput()
     }
 
     override suspend fun onConnected() {
         super.onConnected()
-        isStreaming.set(false)
+        audioInput.isStreaming = false
         ttsPlayer.runStopped()
     }
 
@@ -81,22 +69,22 @@ class VoiceSatellite(
         when (message) {
             is VoiceAssistantConfigurationRequest -> sendMessage(
                 voiceAssistantConfigurationResponse {
-                    availableWakeWords += wakeWordDetector.wakeWords.map {
+                    availableWakeWords += audioInput.availableWakeWords.map {
                         voiceAssistantWakeWord {
                             id = it.id
                             wakeWord = it.wakeWord.wake_word
                             trainedLanguages += it.wakeWord.trained_languages.toList()
                         }
                     }
-                    activeWakeWords += wakeWordDetector.activeWakeWords
+                    activeWakeWords += audioInput.activeWakeWords
                     maxActiveWakeWords = 1
                 })
 
             is VoiceAssistantSetConfiguration -> {
                 val activeWakeWords =
-                    message.activeWakeWordsList.filter { wakeWordDetector.wakeWords.any { wakeWord -> wakeWord.id == it } }
+                    message.activeWakeWordsList.filter { audioInput.availableWakeWords.any { wakeWord -> wakeWord.id == it } }
                 Log.d(TAG, "Setting active wake words: $activeWakeWords")
-                wakeWordDetector.activeWakeWords = activeWakeWords
+                audioInput.activeWakeWords = activeWakeWords
                 val ignoredWakeWords =
                     message.activeWakeWordsList.filter { !activeWakeWords.contains(it) }
                 if (ignoredWakeWords.isNotEmpty())
@@ -119,12 +107,12 @@ class VoiceSatellite(
             VoiceAssistantEvent.VOICE_ASSISTANT_RUN_START -> {
                 val ttsUrl = voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
                 ttsPlayer.runStart(ttsUrl, ::ttsFinishedCallback)
-                isStreaming.set(true)
+                audioInput.isStreaming = true
                 continueConversation = false
             }
 
             VoiceAssistantEvent.VOICE_ASSISTANT_STT_VAD_END, VoiceAssistantEvent.VOICE_ASSISTANT_STT_END -> {
-                isStreaming.set(false)
+                audioInput.isStreaming = false
             }
 
             VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_PROGRESS -> {
@@ -148,7 +136,7 @@ class VoiceSatellite(
             }
 
             VoiceAssistantEvent.VOICE_ASSISTANT_RUN_END -> {
-                isStreaming.set(false)
+                audioInput.isStreaming = false
                 ttsPlayer.runEnd()
             }
 
@@ -158,18 +146,12 @@ class VoiceSatellite(
         }
     }
 
-    private sealed class AudioResult {
-        data class Audio(val audio: ByteString) : AudioResult()
-        data class WakeDetected(val wakeWord: String) : AudioResult()
-        class StopDetected() : AudioResult()
-    }
-
     @OptIn(ExperimentalCoroutinesApi::class)
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    private fun startMicrophoneInput() = server.isConnected
+    private fun startAudioInput() = server.isConnected
             .flatMapLatest { isConnected ->
                 if (isConnected) {
-                    handleMicrophoneAudio()
+                    audioInput.start()
                 } else {
                     emptyFlow()
                 }
@@ -177,43 +159,12 @@ class VoiceSatellite(
             .flowOn(Dispatchers.IO)
             .onEach {
                 when (it) {
-                    is AudioResult.Audio -> sendMessage(voiceAssistantAudio { data = it.audio })
-                    is AudioResult.WakeDetected -> if (!isStreaming.get()) wakeSatellite(it.wakeWord)
-                    is AudioResult.StopDetected -> if (ttsPlayer.isPlaying) stopSatellite()
+                    is VoiceSatelliteAudioInput.AudioResult.Audio -> sendMessage(voiceAssistantAudio { data = it.audio })
+                    is VoiceSatelliteAudioInput.AudioResult.WakeDetected -> if (!audioInput.isStreaming) wakeSatellite(it.wakeWord)
+                    is VoiceSatelliteAudioInput.AudioResult.StopDetected -> if (ttsPlayer.isPlaying) stopSatellite()
                 }
             }
             .launchIn(scope)
-
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    private fun handleMicrophoneAudio() = flow {
-        MicrophoneInput().use { microphoneInput ->
-            microphoneInput.start()
-            while (true) {
-                val audio = microphoneInput.read()
-                if (isStreaming.get()) {
-                    emit(AudioResult.Audio(ByteString.copyFrom(audio)))
-                    audio.rewind()
-                }
-                // Always run audio through the models to keep
-                // their internal state up to date
-                val wakeDetections = wakeWordDetector.detect(audio)
-                audio.rewind()
-                if (wakeDetections.isNotEmpty()) {
-                    emit(AudioResult.WakeDetected(wakeDetections.values.first().wakeWordPhrase))
-                }
-
-                val stopDetections = stopWordDetector.detect(audio)
-                audio.rewind()
-                if (stopDetections.isNotEmpty()) {
-                    emit(AudioResult.StopDetected())
-                }
-
-                // yield to ensure upstream emissions and
-                // cancellation have a chance to occur
-                yield()
-            }
-        }
-    }
 
     private suspend fun wakeSatellite(wakeWordPhrase: String = "") {
         Log.d(TAG, "Wake satellite")
@@ -227,7 +178,7 @@ class VoiceSatellite(
 
     private suspend fun stopSatellite() {
         Log.d(TAG, "Stop satellite")
-        isStreaming.set(false)
+        audioInput.isStreaming = false
         continueConversation = false
         ttsPlayer.runStopped()
         sendMessage(voiceAssistantAnnounceFinished { })
@@ -244,12 +195,6 @@ class VoiceSatellite(
             Log.d(TAG, "Continuing conversation")
             wakeSatellite()
         }
-    }
-
-    override fun onScopeCompleted(cause: Throwable?) {
-        super.onScopeCompleted(cause)
-        wakeWordDetector.close()
-        stopWordDetector.close()
     }
 
     override fun close() {
