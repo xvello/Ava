@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 class VoiceSatelliteService() : LifecycleService() {
     private lateinit var wakeLock: PowerManager.WakeLock
-    private val settingsStore = VoiceAssistantPreferencesStore(this)
+    private lateinit var settingsStore: VoiceAssistantPreferencesStore
     private val _voiceSatelliteStateFlow = MutableStateFlow<VoiceSatellite?>(null)
     val voiceSatelliteStateFlow = _voiceSatelliteStateFlow.asStateFlow()
 
@@ -44,6 +44,7 @@ class VoiceSatelliteService() : LifecycleService() {
         super.onCreate()
         wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$TAG::Wakelock")
+        settingsStore = VoiceAssistantPreferencesStore(applicationContext)
     }
 
     class VoiceSatelliteBinder(val service: VoiceSatelliteService) : Binder()
@@ -85,7 +86,8 @@ class VoiceSatelliteService() : LifecycleService() {
 
     override fun onDestroy() {
         _voiceSatelliteStateFlow.getAndUpdate { null }?.close()
-        wakeLock.release()
+        if (wakeLock.isHeld)
+            wakeLock.release()
         super.onDestroy()
     }
 
