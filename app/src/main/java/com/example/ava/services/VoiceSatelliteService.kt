@@ -32,11 +32,7 @@ class VoiceSatelliteService() : LifecycleService() {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val voiceSatelliteState = _voiceSatellite.flatMapLatest {
-        if (it != null) {
-            it.satelliteState
-        } else {
-            flowOf(VoiceSatelliteState.Stopped())
-        }
+        it?.satelliteState ?: flowOf(VoiceSatelliteState.Stopped())
     }
 
     fun startVoiceSatellite() {
