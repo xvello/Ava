@@ -10,11 +10,11 @@ Requires Android 8 or above.
 - Local wake word detection using microWakeWord models
 - Streaming of voice commands
 - Announcements and conversations
+- Wake/preannounce sounds
+- Stop word support
 
 # Todo
-- Wake/preannounce sounds
 - Timers
-- Stop word support
 - Multiple wake word support
 
 # Development
@@ -27,7 +27,8 @@ Requires Android 8 or above.
 3. Add a redirect for the server port (default 6053) to allow incoming connections to be routed to the device, run `redir add tcp:6053:6053` 
 
 ## Connecting to Home Assistant
-
+The device should be auto-discovered by Home Assistant as an ESPHome device in "Settings" -> "Devices and Services", click add to add it.
+If not, manually add it
 1. In Home Assistant, go to "Settings" -> "Device & services"
 2. Click the "Add integration" button
 3. Choose "ESPHome" and then "Set up another instance of ESPHome"
