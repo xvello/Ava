@@ -204,7 +204,10 @@ class VoiceSatellite(
         }
         .launchIn(scope)
 
-    private suspend fun wakeSatellite(wakeWordPhrase: String = "") {
+    private suspend fun wakeSatellite(
+        wakeWordPhrase: String = "",
+        isContinueConversation: Boolean = false
+    ) {
         Log.d(TAG, "Wake satellite")
         audioInput.isStreaming = true
         _satelliteState.value = VoiceSatelliteState.Listening()
@@ -214,6 +217,8 @@ class VoiceSatellite(
                 start = true
                 this.wakeWordPhrase = wakeWordPhrase
             })
+        if (!isContinueConversation && settings.playWakeSound)
+            ttsPlayer.playTts(settings.wakeSound, {})
     }
 
     private suspend fun stopSatellite() {
@@ -233,7 +238,7 @@ class VoiceSatellite(
         sendMessage(voiceAssistantAnnounceFinished { })
         if (continueConversation) {
             Log.d(TAG, "Continuing conversation")
-            wakeSatellite()
+            wakeSatellite(isContinueConversation = true)
         } else {
             _satelliteState.value = VoiceSatelliteState.Idle()
         }
