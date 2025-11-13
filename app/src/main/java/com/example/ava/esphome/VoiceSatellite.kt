@@ -27,7 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
@@ -68,26 +68,33 @@ class VoiceSatellite(
     private var continueConversation = false
     private var timerFinished = false
 
-    private val _satelliteState = MutableStateFlow<VoiceSatelliteState>(VoiceSatelliteState.Disconnected())
-    val satelliteState = combine(_satelliteState, server.isConnected) { state, isConnected ->
-        if (!isConnected) {
-            VoiceSatelliteState.Disconnected()
-        } else {
-            state
-        }
-    }
+    private val _satelliteState =
+        MutableStateFlow<VoiceSatelliteState>(VoiceSatelliteState.Disconnected())
+    val satelliteState = _satelliteState.asStateFlow()
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun start() {
         super.start()
+        startConnectedChangedListener()
         startAudioInput()
     }
 
-    override suspend fun onConnected() {
-        super.onConnected()
-        _satelliteState.value = VoiceSatelliteState.Idle()
+    private fun startConnectedChangedListener() = server.isConnected
+        .onEach { isConnected ->
+            if (isConnected) {
+                _satelliteState.value = VoiceSatelliteState.Idle()
+            } else {
+                onSatelliteDisconnected()
+            }
+        }
+        .launchIn(scope)
+
+    private fun onSatelliteDisconnected() {
         audioInput.isStreaming = false
-        ttsPlayer.runStopped()
+        continueConversation = false
+        timerFinished = false
+        ttsPlayer.stop()
+        _satelliteState.value = VoiceSatelliteState.Disconnected()
     }
 
     override suspend fun handleMessage(message: GeneratedMessage) {
