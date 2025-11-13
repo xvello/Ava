@@ -208,11 +208,7 @@ class VoiceSatellite(
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     private fun startAudioInput() = server.isConnected
         .flatMapLatest { isConnected ->
-            if (isConnected) {
-                audioInput.start()
-            } else {
-                emptyFlow()
-            }
+            if (isConnected) audioInput.start() else emptyFlow()
         }
         .flowOn(Dispatchers.IO)
         .onEach {
@@ -221,14 +217,9 @@ class VoiceSatellite(
                     sendMessage(voiceAssistantAudio { data = it.audio })
 
                 is VoiceSatelliteAudioInput.AudioResult.WakeDetected -> {
-                    // TODO:
-                    // Linux Voice Assistant stops the timer finished sound if active
-                    // when the wake word is detected and does not wake the satellite.
-                    // This behaviour is replicated here but it may be better/expected
-                    // that the timer is stopped then the satellite is woken.
                     if (timerFinished) {
                         stopTimer()
-                    } else if (!audioInput.isStreaming) {
+                    } else if (_satelliteState.value !is VoiceSatelliteState.Listening) {
                         wakeSatellite(it.wakeWord)
                     }
                 }
@@ -249,16 +240,24 @@ class VoiceSatellite(
         isContinueConversation: Boolean = false
     ) {
         Log.d(TAG, "Wake satellite")
-        audioInput.isStreaming = true
         _satelliteState.value = VoiceSatelliteState.Listening()
+        if (!isContinueConversation && settings.playWakeSound) {
+            // Start streaming audio only after the wake sound has finished
+            ttsPlayer.playSound(settings.wakeSound) {
+                scope.launch { sendVoiceAssistantStartRequest(wakeWordPhrase) }
+            }
+        } else {
+            sendVoiceAssistantStartRequest(wakeWordPhrase)
+        }
+    }
+
+    private suspend fun sendVoiceAssistantStartRequest(wakeWordPhrase: String = "") {
         sendMessage(
             voiceAssistantRequest
             {
                 start = true
                 this.wakeWordPhrase = wakeWordPhrase
             })
-        if (!isContinueConversation && settings.playWakeSound)
-            ttsPlayer.playSound(settings.wakeSound, {})
     }
 
     private suspend fun stopSatellite() {
