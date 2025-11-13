@@ -147,7 +147,7 @@ class VoiceSatellite(
             VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_FINISHED -> {
                 if (!timerFinished) {
                     timerFinished = true
-                    ttsPlayer.playTts(settings.timerFinishedSound, ::timerFinishedCallback)
+                    ttsPlayer.playSound(settings.timerFinishedSound, ::timerFinishedCallback)
                 }
             }
 
@@ -159,7 +159,7 @@ class VoiceSatellite(
         when (voiceEvent.eventType) {
             VoiceAssistantEvent.VOICE_ASSISTANT_RUN_START -> {
                 val ttsUrl = voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
-                ttsPlayer.runStart(ttsUrl)
+                ttsPlayer.runStart(ttsUrl, ::ttsFinishedCallback)
                 audioInput.isStreaming = true
                 continueConversation = false
             }
@@ -171,7 +171,7 @@ class VoiceSatellite(
 
             VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_PROGRESS -> {
                 if (voiceEvent.dataList.firstOrNull { data -> data.name == "tts_start_streaming" }?.value == "1") {
-                    ttsPlayer.streamTts(::ttsFinishedCallback)
+                    ttsPlayer.streamTts()
                 }
             }
 
@@ -189,7 +189,7 @@ class VoiceSatellite(
                 if (!ttsPlayer.ttsPlayed) {
                     val ttsUrl =
                         voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
-                    ttsPlayer.playTts(ttsUrl, ::ttsFinishedCallback)
+                    ttsPlayer.playTts(ttsUrl)
                 }
             }
 
@@ -258,14 +258,14 @@ class VoiceSatellite(
                 this.wakeWordPhrase = wakeWordPhrase
             })
         if (!isContinueConversation && settings.playWakeSound)
-            ttsPlayer.playTts(settings.wakeSound, {})
+            ttsPlayer.playSound(settings.wakeSound, {})
     }
 
     private suspend fun stopSatellite() {
         Log.d(TAG, "Stop satellite")
         audioInput.isStreaming = false
         continueConversation = false
-        ttsPlayer.runStopped()
+        ttsPlayer.stop()
         sendMessage(voiceAssistantAnnounceFinished { })
     }
 
@@ -273,7 +273,7 @@ class VoiceSatellite(
         Log.d(TAG, "Stop timer")
         if (timerFinished) {
             timerFinished = false
-            ttsPlayer.runStopped()
+            ttsPlayer.stop()
         }
     }
 
@@ -300,7 +300,7 @@ class VoiceSatellite(
         if (timerFinished) {
             delay(1000)
             if (timerFinished) {
-                ttsPlayer.playTts(settings.timerFinishedSound, ::timerFinishedCallback)
+                ttsPlayer.playSound(settings.timerFinishedSound, ::timerFinishedCallback)
             }
         }
     }

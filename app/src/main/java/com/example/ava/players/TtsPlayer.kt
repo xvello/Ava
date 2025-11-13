@@ -37,10 +37,10 @@ class TtsPlayer(context: Context) : MediaPlayer, AutoCloseable {
             player.volume = value
         }
 
-    fun runStart(ttsStreamUrl: String?) {
+    fun runStart(ttsStreamUrl: String?, onCompletion: () -> Unit) {
         this.ttsStreamUrl = ttsStreamUrl
+        this.onCompletion = onCompletion
         _ttsPlayed = false
-        onCompletion = null
     }
 
     fun runEnd() {
@@ -53,20 +53,12 @@ class TtsPlayer(context: Context) : MediaPlayer, AutoCloseable {
         ttsStreamUrl = null
     }
 
-    fun runStopped() {
-        onCompletion = null
-        _ttsPlayed = false
-        ttsStreamUrl = null
-        player.stop()
+    fun streamTts() {
+        playTts(ttsStreamUrl)
     }
 
-    fun streamTts(onCompletion: () -> Unit) {
-        playTts(ttsStreamUrl, onCompletion)
-    }
-
-    fun playTts(ttsUrl: String?, onCompletion: () -> Unit) {
+    fun playTts(ttsUrl: String?) {
         if (!ttsUrl.isNullOrBlank()) {
-            this.onCompletion = onCompletion
             _ttsPlayed = true
             play(ttsUrl, null)
         } else {
@@ -74,11 +66,22 @@ class TtsPlayer(context: Context) : MediaPlayer, AutoCloseable {
         }
     }
 
+    fun playSound(soundUrl: String?, onCompletion: () -> Unit) {
+        playAnnouncement(soundUrl, null, onCompletion)
+    }
+
     fun playAnnouncement(mediaUrl: String?, preannounceUrl: String?, onCompletion: () -> Unit) {
         if (!mediaUrl.isNullOrBlank()) {
             this.onCompletion = onCompletion
             play(mediaUrl, preannounceUrl)
         }
+    }
+
+    fun stop() {
+        onCompletion = null
+        _ttsPlayed = false
+        ttsStreamUrl = null
+        player.stop()
     }
 
     private fun play(mediaUrl: String, preannounceUrl: String?) {
