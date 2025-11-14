@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 
-val Context.voiceSatelliteDataStore: DataStore<Preferences> by preferencesDataStore(name = "voice_assistant_settings")
+val Context.voiceSatelliteDataStore: DataStore<Preferences> by preferencesDataStore(name = "voice_satellite_settings")
 
 data class VoiceSatelliteSettings(
     val name: String,
@@ -42,7 +42,7 @@ object VoiceSatellitePreferenceKeys{
     val TIMER_FINISHED_SOUND = stringPreferencesKey("timer_finished_sound")
 }
 
-class VoiceAssistantPreferencesStore(context: Context) {
+class VoiceSatellitePreferencesStore(context: Context) {
     private val dataStore = context.voiceSatelliteDataStore
 
     fun getSettingsFlow() =

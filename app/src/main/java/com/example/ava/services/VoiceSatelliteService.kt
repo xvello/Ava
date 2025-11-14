@@ -15,7 +15,7 @@ import com.example.ava.notifications.createVoiceSatelliteServiceNotification
 import com.example.ava.nsd.NsdRegistration
 import com.example.ava.nsd.registerVoiceSatelliteNsd
 import com.example.ava.players.TtsPlayer
-import com.example.ava.preferences.VoiceAssistantPreferencesStore
+import com.example.ava.preferences.VoiceSatellitePreferencesStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 class VoiceSatelliteService() : LifecycleService() {
     private lateinit var wakeLock: PowerManager.WakeLock
-    private lateinit var settingsStore: VoiceAssistantPreferencesStore
+    private lateinit var settingsStore: VoiceSatellitePreferencesStore
     private var voiceSatelliteNsd = AtomicReference<NsdRegistration?>(null)
     private val _voiceSatellite = MutableStateFlow<VoiceSatellite?>(null)
 
@@ -56,7 +56,7 @@ class VoiceSatelliteService() : LifecycleService() {
         super.onCreate()
         wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$TAG::Wakelock")
-        settingsStore = VoiceAssistantPreferencesStore(applicationContext)
+        settingsStore = VoiceSatellitePreferencesStore(applicationContext)
     }
 
     class VoiceSatelliteBinder(val service: VoiceSatelliteService) : Binder()

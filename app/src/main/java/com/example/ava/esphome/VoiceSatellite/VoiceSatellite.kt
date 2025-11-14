@@ -8,7 +8,7 @@ import com.example.ava.esphome.entities.Entity
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.microwakeword.WakeWordProvider
 import com.example.ava.players.TtsPlayer
-import com.example.ava.preferences.VoiceAssistantPreferencesStore
+import com.example.ava.preferences.VoiceSatellitePreferencesStore
 import com.example.ava.preferences.VoiceSatelliteSettings
 import com.example.esphomeproto.api.VoiceAssistantAnnounceRequest
 import com.example.esphomeproto.api.VoiceAssistantConfigurationRequest
@@ -46,7 +46,7 @@ class VoiceSatellite(
     wakeWordProvider: WakeWordProvider,
     stopWordProvider: WakeWordProvider,
     val ttsPlayer: TtsPlayer,
-    val settingsStore: VoiceAssistantPreferencesStore
+    val settingsStore: VoiceSatellitePreferencesStore
 ) : EspHomeDevice(
     coroutineContext,
     settings.name,

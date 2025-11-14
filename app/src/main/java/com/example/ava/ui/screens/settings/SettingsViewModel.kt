@@ -9,7 +9,7 @@ import com.example.ava.R
 import com.example.ava.microwakeword.AssetWakeWordProvider
 import com.example.ava.microwakeword.WakeWordProvider
 import com.example.ava.microwakeword.WakeWordWithId
-import com.example.ava.preferences.VoiceAssistantPreferencesStore
+import com.example.ava.preferences.VoiceSatellitePreferencesStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.map
 import kotlin.collections.firstOrNull
@@ -26,7 +26,7 @@ data class UIState(
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
-    private val preferencesStore = VoiceAssistantPreferencesStore(application)
+    private val preferencesStore = VoiceSatellitePreferencesStore(application)
     private val wakeWordProvider: WakeWordProvider = AssetWakeWordProvider(application.assets)
     private val wakeWords = wakeWordProvider.getWakeWords()
 
