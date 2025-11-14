@@ -87,7 +87,8 @@ class VoiceSatelliteService() : LifecycleService() {
                     settings,
                     wakeWordProvider,
                     stopWordProvider,
-                    ttsPlayer
+                    ttsPlayer,
+                    settingsStore
                 )
                 _voiceSatellite.value = satellite
                 satellite.start()

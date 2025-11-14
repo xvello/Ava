@@ -8,6 +8,7 @@ import com.example.ava.esphome.entities.Entity
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.microwakeword.WakeWordProvider
 import com.example.ava.players.TtsPlayer
+import com.example.ava.preferences.VoiceAssistantPreferencesStore
 import com.example.ava.preferences.VoiceSatelliteSettings
 import com.example.esphomeproto.api.VoiceAssistantAnnounceRequest
 import com.example.esphomeproto.api.VoiceAssistantConfigurationRequest
@@ -28,21 +29,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 class VoiceSatellite(
     coroutineContext: CoroutineContext,
-    val settings: VoiceSatelliteSettings,
+    settings: VoiceSatelliteSettings,
     wakeWordProvider: WakeWordProvider,
     stopWordProvider: WakeWordProvider,
-    val ttsPlayer: TtsPlayer
+    val ttsPlayer: TtsPlayer,
+    val settingsStore: VoiceAssistantPreferencesStore
 ) : EspHomeDevice(
     coroutineContext,
     settings.name,
@@ -61,6 +65,9 @@ class VoiceSatellite(
     private val _satelliteState =
         MutableStateFlow<VoiceSatelliteState>(VoiceSatelliteState.Disconnected())
     val satelliteState = _satelliteState.asStateFlow()
+
+    private val settingsState = settingsStore.getSettingsFlow()
+        .stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = settings)
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun start() {
@@ -118,7 +125,10 @@ class VoiceSatellite(
                 val activeWakeWords =
                     message.activeWakeWordsList.filter { audioInput.availableWakeWords.any { wakeWord -> wakeWord.id == it } }
                 Log.d(TAG, "Setting active wake words: $activeWakeWords")
-                audioInput.activeWakeWords = activeWakeWords
+                if (activeWakeWords.isNotEmpty()) {
+                    audioInput.activeWakeWords = activeWakeWords
+                    settingsStore.saveWakeWord(activeWakeWords.first())
+                }
                 val ignoredWakeWords =
                     message.activeWakeWordsList.filter { !activeWakeWords.contains(it) }
                 if (ignoredWakeWords.isNotEmpty())
@@ -150,7 +160,7 @@ class VoiceSatellite(
             VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_FINISHED -> {
                 if (!timerFinished) {
                     timerFinished = true
-                    ttsPlayer.playSound(settings.timerFinishedSound) {
+                    ttsPlayer.playSound(settingsState.value.timerFinishedSound) {
                         scope.launch { onTimerFinished() }
                     }
                 }
@@ -211,7 +221,7 @@ class VoiceSatellite(
         }
     }
 
-    private suspend fun handleAudioResult(audioResult: VoiceSatelliteAudioInput.AudioResult){
+    private suspend fun handleAudioResult(audioResult: VoiceSatelliteAudioInput.AudioResult) {
         when (audioResult) {
             is VoiceSatelliteAudioInput.AudioResult.Audio ->
                 sendMessage(voiceAssistantAudio { data = audioResult.audio })
@@ -246,9 +256,9 @@ class VoiceSatellite(
     ) {
         Log.d(TAG, "Wake satellite")
         _satelliteState.value = VoiceSatelliteState.Listening()
-        if (!isContinueConversation && settings.playWakeSound) {
+        if (!isContinueConversation && settingsState.value.playWakeSound) {
             // Start streaming audio only after the wake sound has finished
-            ttsPlayer.playSound(settings.wakeSound) {
+            ttsPlayer.playSound(settingsState.value.wakeSound) {
                 scope.launch { sendVoiceAssistantStartRequest(wakeWordPhrase) }
             }
         } else {
@@ -296,7 +306,7 @@ class VoiceSatellite(
         if (timerFinished) {
             delay(1000)
             if (timerFinished) {
-                ttsPlayer.playSound(settings.timerFinishedSound) {
+                ttsPlayer.playSound(settingsState.value.timerFinishedSound) {
                     scope.launch { onTimerFinished() }
                 }
             }
