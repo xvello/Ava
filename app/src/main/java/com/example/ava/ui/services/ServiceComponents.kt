@@ -29,6 +29,7 @@ import com.example.ava.R
 import com.example.ava.esphome.Connected
 import com.example.ava.esphome.Disconnected
 import com.example.ava.esphome.EspHomeState
+import com.example.ava.esphome.ServerError
 import com.example.ava.esphome.Stopped
 import com.example.ava.esphome.VoiceSatellite.Listening
 import com.example.ava.esphome.VoiceSatellite.Processing
@@ -86,6 +87,7 @@ fun stateText(state: EspHomeState) = when (state) {
     is Listening -> stringResource(R.string.satellite_state_listening)
     is Processing -> stringResource(R.string.satellite_state_processing)
     is Responding -> stringResource(R.string.satellite_state_responding)
+    is ServerError -> stringResource(R.string.satellite_state_server_error, state.message)
     else -> {
         remember(state) { state.toString() }
     }
@@ -93,7 +95,7 @@ fun stateText(state: EspHomeState) = when (state) {
 
 @Composable
 fun stateColor(state: EspHomeState) = when (state) {
-    is Stopped, is Disconnected -> MaterialTheme.colorScheme.error
+    is Stopped, is Disconnected, is ServerError -> MaterialTheme.colorScheme.error
     is Connected -> MaterialTheme.colorScheme.secondary
     else -> MaterialTheme.colorScheme.primary
 }

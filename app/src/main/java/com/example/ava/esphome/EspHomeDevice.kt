@@ -3,6 +3,7 @@ package com.example.ava.esphome
 import android.util.Log
 import com.example.ava.esphome.entities.Entity
 import com.example.ava.server.Server
+import com.example.ava.server.ServerException
 import com.example.esphomeproto.api.ConnectRequest
 import com.example.esphomeproto.api.DeviceInfoRequest
 import com.example.esphomeproto.api.DeviceInfoResponse
@@ -25,6 +26,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.job
@@ -35,6 +37,7 @@ interface EspHomeState
 data object Connected : EspHomeState
 data object Disconnected : EspHomeState
 data object Stopped : EspHomeState
+data class ServerError(val message: String) : EspHomeState
 
 open class EspHomeDevice(
     coroutineContext: CoroutineContext,
@@ -62,6 +65,10 @@ open class EspHomeDevice(
     fun startServer(){
         server.start(port)
             .onEach { handleMessageInternal(it) }
+            .catch { e ->
+                if (e !is ServerException) throw e
+                _state.value = ServerError(e.message ?: "Unknown error")
+            }
             .launchIn(scope)
     }
 

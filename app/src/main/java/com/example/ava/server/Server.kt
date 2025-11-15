@@ -21,31 +21,36 @@ import java.nio.channels.AsynchronousServerSocketChannel
 import java.nio.channels.AsynchronousSocketChannel
 import java.util.concurrent.atomic.AtomicReference
 
+class ServerException(message: String?, cause: Throwable? = null) :
+    Throwable(message, cause)
+
 class Server(private val dispatcher : CoroutineDispatcher = Dispatchers.IO) : AutoCloseable {
     private val serverRef = AtomicReference<AsynchronousServerSocketChannel?>(null)
     private val connection = MutableStateFlow<ClientConnection?>(null)
     val isConnected = connection.map { it != null }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun start(port: Int = DEFAULT_SERVER_PORT) =
-        acceptClients(port).flatMapConcat {
+    fun start(port: Int = DEFAULT_SERVER_PORT) = acceptClients(port)
+        .catch { throw ServerException(it.message, it) }
+        .flatMapConcat {
             connectClient(it)
         }
-        .catch { Log.e(TAG, "Error connecting client", it) }
+        .catch {
+            if (it is ServerException) throw it
+            Log.e(TAG, "Client connection error", it)
+        }
         .flowOn(dispatcher)
 
     private fun acceptClients(port: Int) = flow {
         var server: AsynchronousServerSocketChannel? = null
         try {
             server = AsynchronousServerSocketChannel.open()
-            if (serverRef.compareAndSet(null, server)) {
-                server.bind(InetSocketAddress(port))
-                while (true) {
-                    val accepted = server.acceptAsync()
-                    emit(accepted)
-                }
-            } else {
+            if (!serverRef.compareAndSet(null, server))
                 error("Server already started")
+            server.bind(InetSocketAddress(port))
+            while (true) {
+                val accepted = server.acceptAsync()
+                emit(accepted)
             }
         } finally {
             server?.close()
