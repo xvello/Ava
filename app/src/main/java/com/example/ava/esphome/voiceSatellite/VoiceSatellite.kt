@@ -1,4 +1,4 @@
-package com.example.ava.esphome.VoiceSatellite
+package com.example.ava.esphome.voiceSatellite
 
 import android.Manifest
 import android.util.Log

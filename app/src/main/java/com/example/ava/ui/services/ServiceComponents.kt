@@ -31,9 +31,9 @@ import com.example.ava.esphome.Disconnected
 import com.example.ava.esphome.EspHomeState
 import com.example.ava.esphome.ServerError
 import com.example.ava.esphome.Stopped
-import com.example.ava.esphome.VoiceSatellite.Listening
-import com.example.ava.esphome.VoiceSatellite.Processing
-import com.example.ava.esphome.VoiceSatellite.Responding
+import com.example.ava.esphome.voiceSatellite.Listening
+import com.example.ava.esphome.voiceSatellite.Processing
+import com.example.ava.esphome.voiceSatellite.Responding
 import com.example.ava.services.VoiceSatelliteService
 import com.example.ava.permissions.VOICE_SATELLITE_PERMISSIONS
 import kotlin.collections.filter
@@ -44,20 +44,20 @@ import kotlin.let
 
 @Composable
 fun StartStopVoiceSatellite() {
-    var _service by remember { mutableStateOf<VoiceSatelliteService?>(null) }
+    var service by remember { mutableStateOf<VoiceSatelliteService?>(null) }
     BindToService(
-        onConnected = { _service = it },
-        onDisconnected = { _service = null }
+        onConnected = { service = it },
+        onDisconnected = { service = null }
     )
 
-    val service = _service
-    if (service == null) {
+    val currentService = service
+    if (currentService == null) {
         Text(
             text = "Service disconnected",
             color = MaterialTheme.colorScheme.error
         )
     } else {
-        val serviceState by service.voiceSatelliteState.collectAsStateWithLifecycle(
+        val serviceState by currentService.voiceSatelliteState.collectAsStateWithLifecycle(
             Stopped
         )
 
@@ -72,8 +72,8 @@ fun StartStopVoiceSatellite() {
         StartStopWithPermissionsButton(
             permissions = VOICE_SATELLITE_PERMISSIONS,
             isStarted = serviceState !is Stopped,
-            onStart = { service.startVoiceSatellite() },
-            onStop = { service.stopVoiceSatellite() },
+            onStart = { currentService.startVoiceSatellite() },
+            onStop = { currentService.stopVoiceSatellite() },
             onPermissionDenied = { /*TODO*/ }
         )
     }

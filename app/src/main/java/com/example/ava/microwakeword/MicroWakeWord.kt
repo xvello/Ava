@@ -19,14 +19,13 @@ class MicroWakeWord(
     private val probabilityCutoff: Float,
     private val slidingWindowSize: Int
 ) : AutoCloseable {
-    private val interpreter: Interpreter
+    private val interpreter: Interpreter = Interpreter(model)
     private val inputTensorBuffer: TensorBuffer
     private val outputScale: Float
     private val outputZeroPoint: Int
     private val probabilities = ArrayDeque<Float>(slidingWindowSize)
 
     init {
-        interpreter = Interpreter(model)
         interpreter.allocateTensors()
 
         val inputDetails = interpreter.getInputTensor(0)
@@ -82,6 +81,6 @@ class MicroWakeWord(
     }
 
     companion object {
-        val TAG = "MicroWakeWord"
+        private const val TAG = "MicroWakeWord"
     }
 }

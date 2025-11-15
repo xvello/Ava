@@ -28,7 +28,7 @@ fun IntSetting(
 
 val intOrEmptyInputTransformation: InputTransformation = InputTransformation {
     val text = toString()
-    if (text.length > 0) {
+    if (text.isNotEmpty()) {
         val value = text.toIntOrNull()
         if (value == null)
             revertAllChanges()

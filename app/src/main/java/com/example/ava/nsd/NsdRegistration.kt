@@ -22,9 +22,9 @@ class NsdRegistration(
     }
 
     private val registrationListener = object : NsdManager.RegistrationListener {
-        override fun onServiceRegistered(NsdServiceInfo: NsdServiceInfo) {
+        override fun onServiceRegistered(nsdServiceInfo: NsdServiceInfo) {
             // Name may have been automatically changed to resolve a conflict
-            name = NsdServiceInfo.serviceName
+            name = nsdServiceInfo.serviceName
             Log.d(TAG, "Service registered: $name")
         }
 

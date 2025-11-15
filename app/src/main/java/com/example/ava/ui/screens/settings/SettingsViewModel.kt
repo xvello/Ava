@@ -84,10 +84,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun validateWakeWord(wakeWordId: String): String? {
         val wakeWordWithId = wakeWords.firstOrNull { it.id == wakeWordId }
-        if (wakeWordWithId == null)
-            return application.getString(R.string.validation_voice_satellite_wake_word_invalid)
+        return if (wakeWordWithId == null)
+            application.getString(R.string.validation_voice_satellite_wake_word_invalid)
         else
-            return null
+            null
     }
 
     companion object {

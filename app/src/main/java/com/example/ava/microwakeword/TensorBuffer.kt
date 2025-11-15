@@ -5,9 +5,9 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.roundToInt
 
-abstract class TensorBuffer(val dataType: DataType, val shape: IntArray, val scale: Float, val zeroPoint: Int) {
+abstract class TensorBuffer(dataType: DataType, shape: IntArray, val scale: Float, val zeroPoint: Int) {
     private val _flatSize: Int = shape.reduce { acc, i -> acc * i }
-    protected val buffer =
+    protected val buffer: ByteBuffer =
         ByteBuffer.allocateDirect(_flatSize * dataType.byteSize()).order(ByteOrder.nativeOrder())
 
     val flatSize get() = _flatSize

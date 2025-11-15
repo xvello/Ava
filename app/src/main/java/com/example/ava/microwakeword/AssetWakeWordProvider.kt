@@ -36,9 +36,9 @@ class AssetWakeWordProvider(val assets: AssetManager, val path: String = DEFAULT
 
     override fun loadWakeWordModel(model: String): ByteBuffer {
         val modelFileDescriptor = assets.openFd("$path/$model")
-        modelFileDescriptor.use {
-            FileInputStream(it.fileDescriptor).use {
-                val fileChannel = it.channel
+        modelFileDescriptor.use { descriptor ->
+            FileInputStream(descriptor.fileDescriptor).use { stream ->
+                val fileChannel = stream.channel
                 val startOffset: Long = modelFileDescriptor.startOffset
                 val declaredLength: Long = modelFileDescriptor.declaredLength
                 return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)

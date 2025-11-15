@@ -4,11 +4,12 @@ import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.nio.channels.AsynchronousCloseException
 import java.nio.channels.AsynchronousServerSocketChannel
+import java.nio.channels.AsynchronousSocketChannel
 import java.nio.channels.CompletionHandler
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-suspend fun AsynchronousServerSocketChannel.acceptAsync() = suspendCancellableCoroutine { cont ->
+suspend fun AsynchronousServerSocketChannel.acceptAsync(): AsynchronousSocketChannel = suspendCancellableCoroutine { cont ->
     accept(cont, asyncIOHandler())
 }
 
