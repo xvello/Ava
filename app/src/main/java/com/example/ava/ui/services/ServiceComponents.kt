@@ -31,9 +31,9 @@ import com.example.ava.esphome.Disconnected
 import com.example.ava.esphome.EspHomeState
 import com.example.ava.esphome.ServerError
 import com.example.ava.esphome.Stopped
-import com.example.ava.esphome.voiceSatellite.Listening
-import com.example.ava.esphome.voiceSatellite.Processing
-import com.example.ava.esphome.voiceSatellite.Responding
+import com.example.ava.esphome.voicesatellite.Listening
+import com.example.ava.esphome.voicesatellite.Processing
+import com.example.ava.esphome.voicesatellite.Responding
 import com.example.ava.permissions.VOICE_SATELLITE_PERMISSIONS
 import com.example.ava.services.VoiceSatelliteService
 

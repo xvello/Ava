@@ -1,4 +1,4 @@
-package com.example.ava.esphome.voiceSatellite
+package com.example.ava.esphome.voicesatellite
 
 import android.Manifest
 import androidx.annotation.RequiresPermission
