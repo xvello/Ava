@@ -14,7 +14,6 @@ import com.example.esphomeproto.api.MediaPlayerCommandRequest
 import com.example.esphomeproto.api.PingRequest
 import com.example.esphomeproto.api.SubscribeHomeAssistantStatesRequest
 import com.example.esphomeproto.api.connectResponse
-import com.example.esphomeproto.api.deviceInfoResponse
 import com.example.esphomeproto.api.disconnectResponse
 import com.example.esphomeproto.api.helloResponse
 import com.example.esphomeproto.api.listEntitiesDoneResponse
@@ -42,11 +41,10 @@ data object Disconnected : EspHomeState
 data object Stopped : EspHomeState
 data class ServerError(val message: String) : EspHomeState
 
-open class EspHomeDevice(
+abstract class EspHomeDevice(
     coroutineContext: CoroutineContext,
     protected val name: String,
     protected val port: Int = Server.DEFAULT_SERVER_PORT,
-    private val deviceInfo: DeviceInfoResponse = deviceInfoResponse { },
     entities: Iterable<Entity> = emptyList()
 ) : AutoCloseable {
     protected val server = Server()
@@ -65,7 +63,9 @@ open class EspHomeDevice(
         listenForEntityStateChanges()
     }
 
-    fun startServer() {
+    protected abstract suspend fun getDeviceInfo(): DeviceInfoResponse
+
+    private fun startServer() {
         server.start(port)
             .onEach { handleMessageInternal(it) }
             .catch { e ->
@@ -115,7 +115,7 @@ open class EspHomeDevice(
                 server.disconnectCurrentClient()
             }
 
-            is DeviceInfoRequest -> sendMessage(deviceInfo)
+            is DeviceInfoRequest -> sendMessage(getDeviceInfo())
 
             is PingRequest -> sendMessage(pingResponse { })
 

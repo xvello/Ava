@@ -8,12 +8,14 @@ import android.os.PowerManager
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import androidx.media3.exoplayer.ExoPlayer
 import com.example.ava.esphome.Stopped
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
 import com.example.ava.microwakeword.AssetWakeWordProvider
 import com.example.ava.notifications.createVoiceSatelliteServiceNotification
 import com.example.ava.nsd.NsdRegistration
 import com.example.ava.nsd.registerVoiceSatelliteNsd
+import com.example.ava.players.MediaPlayer
 import com.example.ava.players.TtsPlayer
 import com.example.ava.preferences.VoiceSatellitePreferencesStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -81,14 +83,17 @@ class VoiceSatelliteService() : LifecycleService() {
                 val settings = settingsStore.getSettings()
                 val wakeWordProvider = AssetWakeWordProvider(assets)
                 val stopWordProvider = AssetWakeWordProvider(assets, "stopWords")
-                val ttsPlayer = TtsPlayer(this@VoiceSatelliteService)
+                val ttsPlayer = TtsPlayer(ExoPlayer.Builder(this@VoiceSatelliteService).build())
+                val mediaPlayer = MediaPlayer(ExoPlayer.Builder(this@VoiceSatelliteService).build())
                 val satellite = VoiceSatellite(
-                    lifecycleScope.coroutineContext,
-                    settings,
-                    wakeWordProvider,
-                    stopWordProvider,
-                    ttsPlayer,
-                    settingsStore
+                    coroutineContext = lifecycleScope.coroutineContext,
+                    name = settings.name,
+                    port = settings.serverPort,
+                    wakeWordProvider = wakeWordProvider,
+                    stopWordProvider = stopWordProvider,
+                    ttsPlayer = ttsPlayer,
+                    mediaPlayer = mediaPlayer,
+                    settingsStore = settingsStore
                 )
                 _voiceSatellite.value = satellite
                 satellite.start()
