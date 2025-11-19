@@ -1,10 +1,8 @@
 package com.example.ava.services
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
-import android.os.PowerManager
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -19,6 +17,7 @@ import com.example.ava.players.MediaPlayer
 import com.example.ava.players.TtsPlayer
 import com.example.ava.preferences.VoiceSatellitePreferencesStore
 import com.example.ava.preferences.VoiceSatelliteSettings
+import com.example.ava.wakelocks.WifiWakeLock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -28,7 +27,7 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicReference
 
 class VoiceSatelliteService() : LifecycleService() {
-    private lateinit var wakeLock: PowerManager.WakeLock
+    private val wifiWakeLock = WifiWakeLock()
     private lateinit var settingsStore: VoiceSatellitePreferencesStore
     private var voiceSatelliteNsd = AtomicReference<NsdRegistration?>(null)
     private val _voiceSatellite = MutableStateFlow<VoiceSatellite?>(null)
@@ -47,9 +46,9 @@ class VoiceSatelliteService() : LifecycleService() {
         val satellite = _voiceSatellite.getAndUpdate { null }
         if (satellite != null) {
             Log.d(TAG, "Stopping voice satellite")
-            wakeLock.release()
             satellite.close()
             voiceSatelliteNsd.getAndSet(null)?.unregister(this)
+            wifiWakeLock.release()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
@@ -57,8 +56,7 @@ class VoiceSatelliteService() : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
-        wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
-            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$TAG::Wakelock")
+        wifiWakeLock.create(applicationContext, TAG)
         settingsStore = VoiceSatellitePreferencesStore(applicationContext)
     }
 
@@ -82,7 +80,7 @@ class VoiceSatelliteService() : LifecycleService() {
                 val settings = settingsStore.getSettings()
                 _voiceSatellite.value = createVoiceSatellite(settings).apply { start() }
                 voiceSatelliteNsd.set(registerVoiceSatelliteNsd(settings))
-                acquireWakeLocks()
+                wifiWakeLock.acquire()
             }
         }
         return super.onStartCommand(intent, flags, startId)
@@ -111,20 +109,10 @@ class VoiceSatelliteService() : LifecycleService() {
             macAddress = settings.macAddress
         )
 
-    private fun acquireWakeLocks() {
-        @SuppressLint("WakelockTimeout")
-        wakeLock.acquire()
-    }
-
-    private fun releaseWakeLocks() {
-        if (wakeLock.isHeld)
-            wakeLock.release()
-    }
-
     override fun onDestroy() {
         _voiceSatellite.getAndUpdate { null }?.close()
         voiceSatelliteNsd.getAndSet(null)?.unregister(this)
-        releaseWakeLocks()
+        wifiWakeLock.release()
         super.onDestroy()
     }
 
