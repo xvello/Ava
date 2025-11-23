@@ -23,8 +23,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ava.R
 import com.example.ava.esphome.Connected
 import com.example.ava.esphome.Disconnected
 import com.example.ava.esphome.EspHomeState
@@ -117,7 +119,8 @@ fun StartStopWithPermissionsButton(
         onPermissionGranted = onStart,
         onPermissionDenied = onPermissionDenied
     )
-    val content = if (isStarted) "Stop" else "Start"
+    val content =
+        stringResource(if (isStarted) R.string.label_stop_service else R.string.label_start_service)
     ExtendedFloatingActionButton(
         onClick = {
             if (isStarted)
