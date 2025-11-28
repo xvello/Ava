@@ -14,8 +14,11 @@ android {
         applicationId = "com.example.ava"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = if (project.ext.has("versionCode"))
+            project.ext.get("versionCode").toString().toInt() else 1
+        versionName = if (project.ext.has("versionName"))
+            project.ext.get("versionName").toString() else "0.0.0"
+        base.archivesName = "Ava-$versionName"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
