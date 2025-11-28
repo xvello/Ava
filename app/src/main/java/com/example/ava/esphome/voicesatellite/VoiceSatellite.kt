@@ -296,6 +296,7 @@ class VoiceSatellite(
         audioInput.isStreaming = false
         continueConversation = false
         mediaPlayerEntity.ttsPlayer.stop()
+        _state.value = Connected
         sendMessage(voiceAssistantAnnounceFinished { })
     }
 
