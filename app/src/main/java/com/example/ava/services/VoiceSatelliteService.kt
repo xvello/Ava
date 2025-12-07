@@ -17,12 +17,14 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.ava.esphome.Stopped
 import com.example.ava.esphome.voicesatellite.VoiceSatellite
+import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayer
 import com.example.ava.microwakeword.AssetWakeWordProvider
 import com.example.ava.notifications.createVoiceSatelliteServiceNotification
 import com.example.ava.notifications.createVoiceSatelliteServiceNotificationChannel
 import com.example.ava.nsd.NsdRegistration
 import com.example.ava.nsd.registerVoiceSatelliteNsd
 import com.example.ava.players.AudioPlayer
+import com.example.ava.players.TtsPlayer
 import com.example.ava.settings.VoiceSatelliteSettings
 import com.example.ava.settings.VoiceSatelliteSettingsStore
 import com.example.ava.settings.voiceSatelliteSettingsStore
@@ -30,22 +32,25 @@ import com.example.ava.utils.translate
 import com.example.ava.wakelocks.WifiWakeLock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicReference
 
+@OptIn(ExperimentalCoroutinesApi::class)
+@androidx.annotation.OptIn(UnstableApi::class)
 class VoiceSatelliteService() : LifecycleService() {
     private val wifiWakeLock = WifiWakeLock()
     private lateinit var settingsStore: VoiceSatelliteSettingsStore
     private var voiceSatelliteNsd = AtomicReference<NsdRegistration?>(null)
     private val _voiceSatellite = MutableStateFlow<VoiceSatellite?>(null)
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     val voiceSatelliteState = _voiceSatellite.flatMapLatest {
         it?.state ?: flowOf(Stopped)
     }
@@ -73,6 +78,7 @@ class VoiceSatelliteService() : LifecycleService() {
         settingsStore = VoiceSatelliteSettingsStore(applicationContext.voiceSatelliteSettingsStore)
         createVoiceSatelliteServiceNotificationChannel(this)
         updateNotificationOnStateChanges()
+        startSettingsWatcher()
     }
 
     class VoiceSatelliteBinder(val service: VoiceSatelliteService) : Binder()
@@ -105,17 +111,44 @@ class VoiceSatelliteService() : LifecycleService() {
         return super.onStartCommand(intent, flags, startId)
     }
 
-    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun startSettingsWatcher() {
+        _voiceSatellite.flatMapLatest { satellite ->
+            if (satellite == null) emptyFlow()
+            else merge(
+                // Update satellite when settings change
+                settingsStore.volume.onEach {
+                    satellite.player.setVolume(it)
+                },
+                settingsStore.muted.onEach {
+                    satellite.player.setMuted(it)
+                },
+                // Update settings when satellite changes,
+                // dropping the initial value to avoid overwriting
+                // settings with the initial/default values
+                satellite.player.volume.drop(1).onEach {
+                    settingsStore.volume.set(it)
+                },
+                satellite.player.muted.drop(1).onEach {
+                    settingsStore.muted.set(it)
+                }
+            )
+        }.launchIn(lifecycleScope)
+    }
+
     private fun createVoiceSatellite(settings: VoiceSatelliteSettings): VoiceSatellite {
-        val ttsPlayer = createAudioPlayer(
-            USAGE_ASSISTANT,
-            AUDIO_CONTENT_TYPE_SPEECH,
-            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
-        )
-        val mediaPlayer = createAudioPlayer(
-            USAGE_MEDIA,
-            AUDIO_CONTENT_TYPE_MUSIC,
-            AudioManager.AUDIOFOCUS_GAIN
+        val player = VoiceSatellitePlayer(
+            ttsPlayer = TtsPlayer(
+                createAudioPlayer(
+                    USAGE_ASSISTANT,
+                    AUDIO_CONTENT_TYPE_SPEECH,
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+                )
+            ),
+            mediaPlayer = createAudioPlayer(
+                USAGE_MEDIA,
+                AUDIO_CONTENT_TYPE_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN
+            )
         )
 
         return VoiceSatellite(
@@ -124,13 +157,11 @@ class VoiceSatelliteService() : LifecycleService() {
             port = settings.serverPort,
             wakeWordProvider = AssetWakeWordProvider(assets),
             stopWordProvider = AssetWakeWordProvider(assets, "stopWords"),
-            ttsPlayer = ttsPlayer,
-            mediaPlayer = mediaPlayer,
+            player = player,
             settingsStore = settingsStore
         )
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     private fun updateNotificationOnStateChanges() = _voiceSatellite
         .flatMapLatest {
             it?.state ?: emptyFlow()
@@ -146,7 +177,6 @@ class VoiceSatelliteService() : LifecycleService() {
         }
         .launchIn(lifecycleScope)
 
-    @androidx.annotation.OptIn(UnstableApi::class)
     fun createAudioPlayer(usage: Int, contentType: Int, focusGain: Int): AudioPlayer {
         val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         return AudioPlayer(audioManager, focusGain) {

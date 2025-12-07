@@ -5,6 +5,12 @@ import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+enum class AudioPlayerState {
+    PLAYING, PAUSED, IDLE
+}
 
 @UnstableApi
 class AudioPlayer(
@@ -15,6 +21,9 @@ class AudioPlayer(
     private var _player: Player? = null
     private var isPlayerInit = false
     private var focusRegistration: AudioFocusRegistration? = null
+
+    private val _state = MutableStateFlow(AudioPlayerState.IDLE)
+    val state = _state.asStateFlow()
 
     val isPlaying: Boolean get() = _player?.isPlaying ?: false
     val isPaused: Boolean
@@ -47,11 +56,11 @@ class AudioPlayer(
         isPlayerInit = true
     }
 
-    fun play(mediaUri: String, onCompletion: () -> Unit) {
+    fun play(mediaUri: String, onCompletion: () -> Unit = {}) {
         play(listOf(mediaUri), onCompletion)
     }
 
-    fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {
+    fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit = {}) {
         if (!isPlayerInit)
             init()
         // Force recreation of player next time its needed
@@ -96,6 +105,15 @@ class AudioPlayer(
                 close()
             }
         }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (isPlaying)
+                _state.value = AudioPlayerState.PLAYING
+            else if (isPaused)
+                _state.value = AudioPlayerState.PAUSED
+            else
+                _state.value = AudioPlayerState.IDLE
+        }
     }
 
     override fun close() {
@@ -104,6 +122,7 @@ class AudioPlayer(
         _player = null
         focusRegistration?.close()
         focusRegistration = null
+        _state.value = AudioPlayerState.IDLE
     }
 
     companion object {

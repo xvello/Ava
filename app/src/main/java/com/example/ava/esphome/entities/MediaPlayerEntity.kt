@@ -2,47 +2,25 @@ package com.example.ava.esphome.entities
 
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
-import com.example.ava.players.AudioPlayer
-import com.example.ava.players.TtsPlayer
-import com.example.ava.settings.SettingsStore
-import com.example.ava.settings.VoiceSatelliteSettings
+import com.example.ava.esphome.voicesatellite.VoiceSatellitePlayer
+import com.example.ava.players.AudioPlayerState
 import com.example.esphomeproto.api.ListEntitiesRequest
 import com.example.esphomeproto.api.MediaPlayerCommand
 import com.example.esphomeproto.api.MediaPlayerCommandRequest
 import com.example.esphomeproto.api.MediaPlayerState
-import com.example.esphomeproto.api.MediaPlayerStateResponse
 import com.example.esphomeproto.api.listEntitiesMediaPlayerResponse
 import com.example.esphomeproto.api.mediaPlayerStateResponse
 import com.google.protobuf.MessageLite
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 
 @OptIn(UnstableApi::class)
 class MediaPlayerEntity(
-    val ttsPlayer: TtsPlayer,
-    val mediaPlayer: AudioPlayer,
     val key: Int = KEY,
     val name: String = NAME,
     val objectId: String = OBJECT_ID,
-    val settingsStore: SettingsStore<VoiceSatelliteSettings>
-) : Entity, AutoCloseable {
-
-    private val mediaPlayerState = AtomicReference(MediaPlayerState.MEDIA_PLAYER_STATE_IDLE)
-    private val muted = AtomicBoolean(false)
-    private val volume = AtomicReference(1.0f)
-    private val isDucked = AtomicBoolean(false)
-
-    private val _state = MutableStateFlow(getStateResponse())
-    override val state = _state.asStateFlow()
-
-    override suspend fun start() {
-        val settings = settingsStore.get()
-        setIsMuted(settings.muted, false)
-        setVolume(settings.volume, false)
-    }
+    val player: VoiceSatellitePlayer
+) : Entity {
 
     override fun handleMessage(message: MessageLite) = flow {
         when (message) {
@@ -54,88 +32,43 @@ class MediaPlayerEntity(
             })
 
             is MediaPlayerCommandRequest -> {
-                if (message.hasMediaUrl) {
-                    setMediaPlayerState(MediaPlayerState.MEDIA_PLAYER_STATE_PLAYING)
-                    mediaPlayer.play(message.mediaUrl) {
-                        setMediaPlayerState(MediaPlayerState.MEDIA_PLAYER_STATE_IDLE)
+                if (message.key == key) {
+                    if (message.hasMediaUrl) {
+                        player.mediaPlayer.play(message.mediaUrl)
+                    } else if (message.hasCommand) {
+                        when (message.command) {
+                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_PAUSE -> player.mediaPlayer.pause()
+                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_PLAY -> player.mediaPlayer.unpause()
+                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_STOP -> player.mediaPlayer.stop()
+                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_MUTE -> player.setMuted(true)
+                            MediaPlayerCommand.MEDIA_PLAYER_COMMAND_UNMUTE -> player.setMuted(false)
+                            else -> {}
+                        }
+                    } else if (message.hasVolume) {
+                        player.setVolume(message.volume)
                     }
-                } else if (message.hasCommand) {
-                    if (message.command == MediaPlayerCommand.MEDIA_PLAYER_COMMAND_PAUSE && mediaPlayer.isPlaying) {
-                        setMediaPlayerState(MediaPlayerState.MEDIA_PLAYER_STATE_PAUSED)
-                        mediaPlayer.pause()
-                    } else if (message.command == MediaPlayerCommand.MEDIA_PLAYER_COMMAND_PLAY && mediaPlayer.isPaused) {
-                        setMediaPlayerState(MediaPlayerState.MEDIA_PLAYER_STATE_PLAYING)
-                        mediaPlayer.unpause()
-                    } else if (message.command == MediaPlayerCommand.MEDIA_PLAYER_COMMAND_MUTE) {
-                        setIsMuted(true)
-                    } else if (message.command == MediaPlayerCommand.MEDIA_PLAYER_COMMAND_UNMUTE) {
-                        setIsMuted(false)
-                    }
-                } else if (message.hasVolume) {
-                    setVolume(message.volume)
                 }
             }
         }
     }
 
-    fun duck() {
-        if (isDucked.compareAndSet(false, true) && !muted.get()) {
-            mediaPlayer.volume = volume.get() / 2
-        }
-    }
-
-    fun unDuck() {
-        if (isDucked.compareAndSet(true, false) && !muted.get()) {
-            mediaPlayer.volume = volume.get()
-        }
-    }
-
-    private fun setMediaPlayerState(state: MediaPlayerState) {
-        this.mediaPlayerState.set(state)
-        stateChanged()
-    }
-
-    private suspend fun setVolume(volume: Float, persist: Boolean = true) {
-        this.volume.set(volume)
-        if (!muted.get()) {
-            ttsPlayer.volume = volume
-            mediaPlayer.volume = if (isDucked.get()) volume / 2 else volume
-        }
-        if (persist)
-            settingsStore.update { it.copy(volume = volume) }
-        stateChanged()
-    }
-
-    private suspend fun setIsMuted(isMuted: Boolean, persist: Boolean = true) {
-        this.muted.set(isMuted)
-        if (isMuted) {
-            mediaPlayer.volume = 0.0f
-            ttsPlayer.volume = 0.0f
-        } else {
-            ttsPlayer.volume = volume.get()
-            mediaPlayer.volume = if (isDucked.get()) volume.get() / 2 else volume.get()
-        }
-        if (persist)
-            settingsStore.update { it.copy(muted = isMuted) }
-        stateChanged()
-    }
-
-    private fun stateChanged() {
-        _state.value = getStateResponse()
-    }
-
-    private fun getStateResponse(): MediaPlayerStateResponse {
-        return mediaPlayerStateResponse {
+    override fun subscribe() = combine(
+        player.mediaPlayer.state,
+        player.volume,
+        player.muted,
+    ) { state, volume, muted ->
+        mediaPlayerStateResponse {
             key = this@MediaPlayerEntity.key
-            state = this@MediaPlayerEntity.mediaPlayerState.get()
-            volume = this@MediaPlayerEntity.volume.get()
-            muted = this@MediaPlayerEntity.muted.get()
+            this.state = getState(state)
+            this.volume = volume
+            this.muted = muted
         }
     }
 
-    override fun close() {
-        ttsPlayer.close()
-        mediaPlayer.close()
+    private fun getState(state: AudioPlayerState) = when (state) {
+        AudioPlayerState.PLAYING -> MediaPlayerState.MEDIA_PLAYER_STATE_PLAYING
+        AudioPlayerState.PAUSED -> MediaPlayerState.MEDIA_PLAYER_STATE_PAUSED
+        AudioPlayerState.IDLE -> MediaPlayerState.MEDIA_PLAYER_STATE_IDLE
     }
 
     companion object {

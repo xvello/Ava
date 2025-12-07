@@ -32,7 +32,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.job
 import kotlin.coroutines.CoroutineContext
 
@@ -87,15 +86,12 @@ abstract class EspHomeDevice(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun listenForEntityStateChanges() = isSubscribedToEntityState
-        .onStart {
-            entities.forEach { it.start() }
-        }
         .flatMapLatest { subscribed ->
             if (!subscribed)
                 emptyFlow()
             else
                 entities
-                    .map { it.state }
+                    .map { it.subscribe() }
                     .merge()
                     .onEach { sendMessage(it) }
         }.launchIn(scope)

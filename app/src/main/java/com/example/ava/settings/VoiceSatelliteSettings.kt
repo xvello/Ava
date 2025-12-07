@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.dataStore
 import com.example.ava.utils.getRandomMacAddressString
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -51,6 +52,11 @@ class VoiceSatelliteSettingsStore(dataStore: DataStore<VoiceSatelliteSettings>) 
     SettingsStoreImpl<VoiceSatelliteSettings>(dataStore, DEFAULT) {
     suspend fun saveName(name: String) =
         update { it.copy(name = name) }
+
+    val volume =
+        SettingState(getFlow().map { it.volume }) { value -> update { it.copy(volume = value) } }
+    val muted =
+        SettingState(getFlow().map { it.muted }) { value -> update { it.copy(muted = value) } }
 
     suspend fun saveServerPort(serverPort: Int) =
         update { it.copy(serverPort = serverPort) }

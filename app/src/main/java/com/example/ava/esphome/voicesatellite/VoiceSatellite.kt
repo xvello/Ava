@@ -3,15 +3,12 @@ package com.example.ava.esphome.voicesatellite
 import android.Manifest
 import android.util.Log
 import androidx.annotation.RequiresPermission
-import androidx.media3.common.util.UnstableApi
 import com.example.ava.esphome.Connected
 import com.example.ava.esphome.EspHomeDevice
 import com.example.ava.esphome.EspHomeState
 import com.example.ava.esphome.entities.Entity
 import com.example.ava.esphome.entities.MediaPlayerEntity
 import com.example.ava.microwakeword.WakeWordProvider
-import com.example.ava.players.AudioPlayer
-import com.example.ava.players.TtsPlayer
 import com.example.ava.settings.VoiceSatelliteSettingsStore
 import com.example.esphomeproto.api.DeviceInfoResponse
 import com.example.esphomeproto.api.VoiceAssistantAnnounceRequest
@@ -51,13 +48,13 @@ class VoiceSatellite(
     port: Int,
     wakeWordProvider: WakeWordProvider,
     stopWordProvider: WakeWordProvider,
-    val mediaPlayerEntity: MediaPlayerEntity,
+    val player: VoiceSatellitePlayer,
     val settingsStore: VoiceSatelliteSettingsStore
 ) : EspHomeDevice(
     coroutineContext,
     name,
     port,
-    listOf<Entity>(mediaPlayerEntity)
+    listOf<Entity>(MediaPlayerEntity(player = player))
 ) {
     private val audioInput = VoiceSatelliteAudioInput(wakeWordProvider, stopWordProvider)
     private var continueConversation = false
@@ -93,7 +90,7 @@ class VoiceSatellite(
         audioInput.isStreaming = false
         continueConversation = false
         timerFinished = false
-        mediaPlayerEntity.ttsPlayer.stop()
+        player.ttsPlayer.stop()
     }
 
     override suspend fun getDeviceInfo(): DeviceInfoResponse = deviceInfoResponse {
@@ -157,8 +154,8 @@ class VoiceSatellite(
             VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_FINISHED -> {
                 if (!timerFinished) {
                     timerFinished = true
-                    mediaPlayerEntity.duck()
-                    mediaPlayerEntity.ttsPlayer.playSound(settingsStore.get().timerFinishedSound) {
+                    player.duck()
+                    player.ttsPlayer.playSound(settingsStore.get().timerFinishedSound) {
                         scope.launch { onTimerFinished() }
                     }
                 }
@@ -175,8 +172,8 @@ class VoiceSatellite(
     ) {
         continueConversation = startConversation
         _state.value = Responding
-        mediaPlayerEntity.duck()
-        mediaPlayerEntity.ttsPlayer.playAnnouncement(
+        player.duck()
+        player.ttsPlayer.playAnnouncement(
             mediaUrl = mediaId,
             preannounceUrl = preannounceId
         ) {
@@ -188,7 +185,7 @@ class VoiceSatellite(
         when (voiceEvent.eventType) {
             VoiceAssistantEvent.VOICE_ASSISTANT_RUN_START -> {
                 val ttsUrl = voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
-                mediaPlayerEntity.ttsPlayer.runStart(ttsStreamUrl = ttsUrl) {
+                player.ttsPlayer.runStart(ttsStreamUrl = ttsUrl) {
                     scope.launch { onTtsFinished() }
                 }
                 audioInput.isStreaming = true
@@ -202,7 +199,7 @@ class VoiceSatellite(
 
             VoiceAssistantEvent.VOICE_ASSISTANT_INTENT_PROGRESS -> {
                 if (voiceEvent.dataList.firstOrNull { data -> data.name == "tts_start_streaming" }?.value == "1") {
-                    mediaPlayerEntity.ttsPlayer.streamTts()
+                    player.ttsPlayer.streamTts()
                 }
             }
 
@@ -217,16 +214,16 @@ class VoiceSatellite(
             }
 
             VoiceAssistantEvent.VOICE_ASSISTANT_TTS_END -> {
-                if (!mediaPlayerEntity.ttsPlayer.ttsPlayed) {
+                if (!player.ttsPlayer.ttsPlayed) {
                     val ttsUrl =
                         voiceEvent.dataList.firstOrNull { data -> data.name == "url" }?.value
-                    mediaPlayerEntity.ttsPlayer.playTts(ttsUrl)
+                    player.ttsPlayer.playTts(ttsUrl)
                 }
             }
 
             VoiceAssistantEvent.VOICE_ASSISTANT_RUN_END -> {
                 audioInput.isStreaming = false
-                mediaPlayerEntity.ttsPlayer.runEnd()
+                player.ttsPlayer.runEnd()
             }
 
             else -> {
@@ -259,7 +256,7 @@ class VoiceSatellite(
     private suspend fun onStopDetected() {
         if (timerFinished) {
             stopTimer()
-        } else if (mediaPlayerEntity.ttsPlayer.isPlaying) {
+        } else if (player.ttsPlayer.isPlaying) {
             stopSatellite()
         }
     }
@@ -271,10 +268,10 @@ class VoiceSatellite(
         Log.d(TAG, "Wake satellite")
         _state.value = Listening
         val settings = settingsStore.get()
-        mediaPlayerEntity.duck()
+        player.duck()
         if (!isContinueConversation && settings.playWakeSound) {
             // Start streaming audio only after the wake sound has finished
-            mediaPlayerEntity.ttsPlayer.playSound(settings.wakeSound) {
+            player.ttsPlayer.playSound(settings.wakeSound) {
                 scope.launch { sendVoiceAssistantStartRequest(wakeWordPhrase) }
             }
         } else {
@@ -295,7 +292,7 @@ class VoiceSatellite(
         Log.d(TAG, "Stop satellite")
         audioInput.isStreaming = false
         continueConversation = false
-        mediaPlayerEntity.ttsPlayer.stop()
+        player.ttsPlayer.stop()
         _state.value = Connected
         sendMessage(voiceAssistantAnnounceFinished { })
     }
@@ -304,7 +301,7 @@ class VoiceSatellite(
         Log.d(TAG, "Stop timer")
         if (timerFinished) {
             timerFinished = false
-            mediaPlayerEntity.ttsPlayer.stop()
+            player.ttsPlayer.stop()
         }
     }
 
@@ -315,7 +312,7 @@ class VoiceSatellite(
             Log.d(TAG, "Continuing conversation")
             wakeSatellite(isContinueConversation = true)
         } else {
-            mediaPlayerEntity.unDuck()
+            player.unDuck()
             _state.value = Connected
         }
     }
@@ -323,40 +320,20 @@ class VoiceSatellite(
     private suspend fun onTimerFinished() {
         delay(1000)
         if (timerFinished) {
-            mediaPlayerEntity.ttsPlayer.playSound(settingsStore.get().timerFinishedSound) {
+            player.ttsPlayer.playSound(settingsStore.get().timerFinishedSound) {
                 scope.launch { onTimerFinished() }
             }
         } else {
-            mediaPlayerEntity.unDuck()
+            player.unDuck()
         }
     }
 
     override fun close() {
         super.close()
-        mediaPlayerEntity.close()
+        player.close()
     }
 
     companion object {
         private const val TAG = "VoiceSatellite"
-
-        @androidx.annotation.OptIn(UnstableApi::class)
-        operator fun invoke(
-            coroutineContext: CoroutineContext,
-            name: String,
-            port: Int,
-            wakeWordProvider: WakeWordProvider,
-            stopWordProvider: WakeWordProvider,
-            ttsPlayer: AudioPlayer,
-            mediaPlayer: AudioPlayer,
-            settingsStore: VoiceSatelliteSettingsStore
-        ): VoiceSatellite = VoiceSatellite(
-            coroutineContext,
-            name,
-            port,
-            wakeWordProvider,
-            stopWordProvider,
-            MediaPlayerEntity(TtsPlayer(ttsPlayer), mediaPlayer, settingsStore = settingsStore),
-            settingsStore
-        )
     }
 }
