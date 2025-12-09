@@ -10,7 +10,6 @@ import com.example.esphomeproto.api.DeviceInfoResponse
 import com.example.esphomeproto.api.DisconnectRequest
 import com.example.esphomeproto.api.HelloRequest
 import com.example.esphomeproto.api.ListEntitiesRequest
-import com.example.esphomeproto.api.MediaPlayerCommandRequest
 import com.example.esphomeproto.api.PingRequest
 import com.example.esphomeproto.api.SubscribeHomeAssistantStatesRequest
 import com.example.esphomeproto.api.connectResponse
@@ -25,10 +24,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flattenConcat
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
@@ -41,6 +42,7 @@ data object Disconnected : EspHomeState
 data object Stopped : EspHomeState
 data class ServerError(val message: String) : EspHomeState
 
+@OptIn(ExperimentalCoroutinesApi::class)
 abstract class EspHomeDevice(
     coroutineContext: CoroutineContext,
     protected val name: String,
@@ -84,7 +86,6 @@ abstract class EspHomeDevice(
         }
         .launchIn(scope)
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     fun listenForEntityStateChanges() = isSubscribedToEntityState
         .flatMapLatest { subscribed ->
             if (!subscribed)
@@ -120,13 +121,17 @@ abstract class EspHomeDevice(
 
             is PingRequest -> sendMessage(pingResponse { })
 
-            is ListEntitiesRequest, is SubscribeHomeAssistantStatesRequest, is MediaPlayerCommandRequest -> {
-                if (message is SubscribeHomeAssistantStatesRequest)
-                    isSubscribedToEntityState.value = true
-                entities.map { it.handleMessage(message) }.merge()
+            is SubscribeHomeAssistantStatesRequest -> isSubscribedToEntityState.value = true
+
+            is ListEntitiesRequest -> {
+                entities.map { it.handleMessage(message) }.asFlow().flattenConcat()
                     .collect { response -> sendMessage(response) }
-                if (message is ListEntitiesRequest)
-                    sendMessage(listEntitiesDoneResponse { })
+                sendMessage(listEntitiesDoneResponse { })
+            }
+
+            else -> {
+                entities.map { it.handleMessage(message) }.asFlow().flattenConcat()
+                    .collect { response -> sendMessage(response) }
             }
         }
     }
