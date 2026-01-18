@@ -14,15 +14,12 @@ import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 
 class AssetWakeWordProvider(
-    val assets: AssetManager,
-    val path: String = DEFAULT_WAKE_WORD_PATH,
-    val dispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val assets: AssetManager,
+    private val path: String = DEFAULT_WAKE_WORD_PATH,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : WakeWordProvider {
     override suspend fun get(): List<WakeWordWithId> = withContext(dispatcher) {
-        val assetsList = assets.list(path)
-        if (assetsList == null)
-            return@withContext emptyList()
-
+        val assetsList = assets.list(path) ?: return@withContext emptyList()
         val gson = Gson()
         val wakeWords = buildList {
             for (asset in assetsList.filter { it.endsWith(".json") }) {
