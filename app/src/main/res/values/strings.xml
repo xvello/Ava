@@ -12,6 +12,8 @@
     <string name="label_voice_satellite_wake_word">Wake word</string>
     <string name="label_voice_satellite_enable_wake_sound">Enable wake sound</string>
     <string name="description_voice_satellite_play_wake_sound">Play a sound when the satellite is woken by a wake word"</string>
+    <string name="label_custom_wake_words">Custom wake words</string>
+    <string name="description_custom_wake_word_location">Specify the location of custom wake word models</string>
 
     <string name="validation_voice_satellite_name_empty">Name cannot be empty</string>
     <string name="validation_voice_satellite_port_invalid">Port must be between 1 and 65535</string>

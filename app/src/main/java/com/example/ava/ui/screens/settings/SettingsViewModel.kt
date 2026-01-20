@@ -1,8 +1,11 @@
 package com.example.ava.ui.screens.settings
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.Immutable
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import com.example.ava.R
 import com.example.ava.settings.MicrophoneSettingsStore
@@ -19,7 +22,8 @@ import javax.inject.Inject
 @Immutable
 data class MicrophoneState(
     val wakeWord: WakeWordWithId,
-    val wakeWords: List<WakeWordWithId>
+    val wakeWords: List<WakeWordWithId>,
+    val customWakeWordLocation: Uri?
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -40,7 +44,8 @@ class SettingsViewModel @Inject constructor(
             wakeWord = wakeWords.firstOrNull { wakeWord ->
                 wakeWord.id == settings.wakeWord
             } ?: wakeWords.first(),
-            wakeWords = wakeWords
+            wakeWords = wakeWords,
+            customWakeWordLocation = settings.customWakeWordLocation?.toUri()
         )
     }
 
@@ -71,6 +76,18 @@ class SettingsViewModel @Inject constructor(
             microphoneSettingsStore.wakeWord.set(wakeWordId)
         } else {
             Log.w(TAG, "Cannot save invalid wake word: $wakeWordId")
+        }
+    }
+
+    suspend fun saveCustomWakeWordDirectory(uri: Uri?) {
+        if (uri != null) {
+            // Get persistable permission to read from the location
+            // ToDo: This should potentially handled elsewhere
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            microphoneSettingsStore.customWakeWordLocation.set(uri.toString())
         }
     }
 

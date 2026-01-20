@@ -1,16 +1,20 @@
 package com.example.ava.settings
 
 import android.content.Context
+import androidx.core.net.toUri
 import com.example.ava.wakewords.models.WakeWordWithId
 import com.example.ava.wakewords.providers.AssetWakeWordProvider
+import com.example.ava.wakewords.providers.DocumentTreeWakeWordProvider
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.serialization.Serializable
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,6 +23,7 @@ import javax.inject.Singleton
 data class MicrophoneSettings(
     val wakeWord: String = "okay_nabu",
     val stopWord: String = "stop",
+    val customWakeWordLocation: String? = null,
     val muted: Boolean = false
 )
 
@@ -44,6 +49,11 @@ interface MicrophoneSettingsStore : SettingsStore<MicrophoneSettings> {
      * The stop word to use for stop word detection.
      */
     val stopWord: SettingState<String>
+
+    /**
+     * The Uri of the directory containing custom wake words or null if not set.
+     */
+    val customWakeWordLocation: SettingState<String?>
 
     /**
      * The muted state of the microphone.
@@ -77,12 +87,24 @@ class MicrophoneSettingsStoreImpl @Inject constructor(@ApplicationContext privat
         update { it.copy(stopWord = value) }
     }
 
+    override val customWakeWordLocation =
+        SettingState(getFlow().map { it.customWakeWordLocation }) { value ->
+            update { it.copy(customWakeWordLocation = value) }
+        }
+
     override val muted = SettingState(getFlow().map { it.muted }) { value ->
         update { it.copy(muted = value) }
     }
 
-    override val availableWakeWords = flow {
-        emit(AssetWakeWordProvider(context.assets).get())
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override val availableWakeWords = customWakeWordLocation.mapLatest {
+        if (it != null)
+            AssetWakeWordProvider(context.assets).get() + DocumentTreeWakeWordProvider(
+                context,
+                it.toUri()
+            ).get()
+        else
+            AssetWakeWordProvider(context.assets).get()
     }
 
     override val availableStopWords = flow {

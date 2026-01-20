@@ -1,5 +1,6 @@
 package com.example.ava.ui.screens.settings
 
+import DocumentTreeSetting
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -80,6 +81,21 @@ fun VoiceSatelliteSettings(
                     if (it != null) {
                         coroutineScope.launch {
                             viewModel.saveWakeWord(it.id)
+                        }
+                    }
+                }
+            )
+        }
+        item {
+            DocumentTreeSetting(
+                name = stringResource(R.string.label_custom_wake_words),
+                description = stringResource(R.string.description_custom_wake_word_location),
+                value = microphoneState?.customWakeWordLocation,
+                enabled = enabled,
+                onResult = {
+                    if (it != null) {
+                        coroutineScope.launch {
+                            viewModel.saveCustomWakeWordDirectory(it)
                         }
                     }
                 }
