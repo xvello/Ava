@@ -15,6 +15,7 @@ Requires Android 8 or above.
 # Implemented
 - Local wake word detection using microWakeWord models
 - Stop word detection
+- Custom wake word support
 - Voice commands
 - Announcements and conversations
 - Media player
@@ -35,22 +36,41 @@ Requires Android 8 or above.
   - Complete the voice assistant setup wizard
  
 # App Settings
-
 Once connected, the satellite is fully configurable from within Home Assistant as a ESPHome voice satellite and media player, however some settings can also be changed from within the app.
 
 - Name: The display name of the satellite. Requires service restart
 - Port: The port to listen on. Requires service restart
+- Autostart service: Whether to automatically start the satellite service on application start
 - Wake word: The wake word to use. Note that changing this in the app does immediately change the wake word, however currently the change is not reflected in Home Assistant. It is recommended to change the wake word from Home Assistant to ensure the configuration remains in sync.
+- Custom wake words: Specify a directory on the device containing custom wake word models
 - Enable wake sound: Whether to play a sound when the satellite is woken by a wake word
+
+# Custom wake word models
+The app includes a default [set of wake words](https://github.com/brownard/Ava/tree/master/app/src/main/assets/wakeWords), however you can also specify a directory containing custom wake words supported by microWakeWord.  
+Create a directory on your device, copy the wake word model(s) as well as valid json file(s) describing each model ([example](https://github.com/brownard/Ava/blob/master/app/src/main/assets/wakeWords/okay_nabu.json)), a minimum valid example json is:
+```
+{
+  "type": "micro",
+  "wake_word": "Custom Wake Word",
+  "model": "custom_wakeword.tflite",
+  "micro": {
+    "probability_cutoff": 0.97,
+    "sliding_window_size": 5
+  }
+}
+```
+Choose the directory in the 'Custom wake words' setting in the app. The wake word(s) in the directory should now be selectable in the app, however you will need to restart the service in order for the new wake words to show in Home Assistant.  
+**If your custom wake words do not appear, double check you have included a valid json file with at least the properties shown above.**
 
 # Development
 1. Clone the repo
 2. Open in Android Studio
 
 # Debugging on an emulated device
-1. Telnet into the device, from a terminal run `telnet localhost 5554`
+You will need to redirect incoming connections on the server port to the emulated device
+1. From a terminal run `telnet localhost 5554` to telnet into the emulator
 2. Enter your auth token if required
-3. Add a redirect for the server port (default 6053) to allow incoming connections to be routed to the device, run `redir add tcp:6053:6053`
+3. Run `redir add tcp:6053:6053` to add a redirect for the server port (default 6053) to allow incoming connections to be routed to the device
 
 <!-- Links -->
 [homeassistant]: https://www.home-assistant.io/
