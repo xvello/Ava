@@ -96,7 +96,6 @@ class VoiceSatellite(
     override suspend fun getDeviceInfo(): DeviceInfoResponse = deviceInfoResponse {
         val settings = settingsStore.get()
         name = settings.name
-        usesPassword = false
         macAddress = settings.macAddress
         voiceAssistantFeatureFlags = VoiceAssistantFeature.VOICE_ASSISTANT.flag or
                 VoiceAssistantFeature.API_AUDIO.flag or

@@ -2,6 +2,8 @@ package com.example.esphomeproto
 
 import com.example.esphomeproto.api.AlarmControlPanelCommandRequest
 import com.example.esphomeproto.api.AlarmControlPanelStateResponse
+import com.example.esphomeproto.api.AuthenticationRequest
+import com.example.esphomeproto.api.AuthenticationResponse
 import com.example.esphomeproto.api.BinarySensorStateResponse
 import com.example.esphomeproto.api.BluetoothConnectionsFreeResponse
 import com.example.esphomeproto.api.BluetoothDeviceClearCacheResponse
@@ -31,8 +33,6 @@ import com.example.esphomeproto.api.CameraImageRequest
 import com.example.esphomeproto.api.CameraImageResponse
 import com.example.esphomeproto.api.ClimateCommandRequest
 import com.example.esphomeproto.api.ClimateStateResponse
-import com.example.esphomeproto.api.ConnectRequest
-import com.example.esphomeproto.api.ConnectResponse
 import com.example.esphomeproto.api.CoverCommandRequest
 import com.example.esphomeproto.api.CoverStateResponse
 import com.example.esphomeproto.api.DateCommandRequest
@@ -45,6 +45,7 @@ import com.example.esphomeproto.api.DisconnectRequest
 import com.example.esphomeproto.api.DisconnectResponse
 import com.example.esphomeproto.api.EventResponse
 import com.example.esphomeproto.api.ExecuteServiceRequest
+import com.example.esphomeproto.api.ExecuteServiceResponse
 import com.example.esphomeproto.api.FanCommandRequest
 import com.example.esphomeproto.api.FanStateResponse
 import com.example.esphomeproto.api.GetTimeRequest
@@ -52,7 +53,10 @@ import com.example.esphomeproto.api.GetTimeResponse
 import com.example.esphomeproto.api.HelloRequest
 import com.example.esphomeproto.api.HelloResponse
 import com.example.esphomeproto.api.HomeAssistantStateResponse
-import com.example.esphomeproto.api.HomeassistantServiceResponse
+import com.example.esphomeproto.api.HomeassistantActionRequest
+import com.example.esphomeproto.api.HomeassistantActionResponse
+import com.example.esphomeproto.api.InfraredRFReceiveEvent
+import com.example.esphomeproto.api.InfraredRFTransmitRawTimingsRequest
 import com.example.esphomeproto.api.LightCommandRequest
 import com.example.esphomeproto.api.LightStateResponse
 import com.example.esphomeproto.api.ListEntitiesAlarmControlPanelResponse
@@ -66,6 +70,7 @@ import com.example.esphomeproto.api.ListEntitiesDateTimeResponse
 import com.example.esphomeproto.api.ListEntitiesDoneResponse
 import com.example.esphomeproto.api.ListEntitiesEventResponse
 import com.example.esphomeproto.api.ListEntitiesFanResponse
+import com.example.esphomeproto.api.ListEntitiesInfraredResponse
 import com.example.esphomeproto.api.ListEntitiesLightResponse
 import com.example.esphomeproto.api.ListEntitiesLockResponse
 import com.example.esphomeproto.api.ListEntitiesMediaPlayerResponse
@@ -81,6 +86,7 @@ import com.example.esphomeproto.api.ListEntitiesTextSensorResponse
 import com.example.esphomeproto.api.ListEntitiesTimeResponse
 import com.example.esphomeproto.api.ListEntitiesUpdateResponse
 import com.example.esphomeproto.api.ListEntitiesValveResponse
+import com.example.esphomeproto.api.ListEntitiesWaterHeaterResponse
 import com.example.esphomeproto.api.LockCommandRequest
 import com.example.esphomeproto.api.LockStateResponse
 import com.example.esphomeproto.api.MediaPlayerCommandRequest
@@ -127,13 +133,27 @@ import com.example.esphomeproto.api.VoiceAssistantRequest
 import com.example.esphomeproto.api.VoiceAssistantResponse
 import com.example.esphomeproto.api.VoiceAssistantSetConfiguration
 import com.example.esphomeproto.api.VoiceAssistantTimerEventResponse
+import com.example.esphomeproto.api.WaterHeaterCommandRequest
+import com.example.esphomeproto.api.WaterHeaterStateResponse
+import com.example.esphomeproto.api.ZWaveProxyFrame
+import com.example.esphomeproto.api.ZWaveProxyRequest
 import com.google.protobuf.Parser
+
+// Conversions to and from message types and parsers/classes
+// Currently this file is generated manually from MESSAGE_TYPE_TO_PROTO here
+// https://github.com/esphome/aioesphomeapi/blob/main/aioesphomeapi/core.py#L370
+// Any updates to the proto definitions will also require that this file is updated
+// to ensure all message types are included.
+
+// Pairs are generated from the python code linked above using regex replace
+// Find: (\d+):\s+(.*?),
+// Replace: Pair\(\1, \2.parser\(\)\),
 
 val MESSAGE_PARSERS = mapOf<Int, Parser<out Any>>(
     Pair(1, HelloRequest.parser()),
     Pair(2, HelloResponse.parser()),
-    Pair(3, ConnectRequest.parser()),
-    Pair(4, ConnectResponse.parser()),
+    Pair(3, AuthenticationRequest.parser()),
+    Pair(4, AuthenticationResponse.parser()),
     Pair(5, DisconnectRequest.parser()),
     Pair(6, DisconnectResponse.parser()),
     Pair(7, PingRequest.parser()),
@@ -164,7 +184,7 @@ val MESSAGE_PARSERS = mapOf<Int, Parser<out Any>>(
     Pair(32, LightCommandRequest.parser()),
     Pair(33, SwitchCommandRequest.parser()),
     Pair(34, SubscribeHomeassistantServicesRequest.parser()),
-    Pair(35, HomeassistantServiceResponse.parser()),
+    Pair(35, HomeassistantActionRequest.parser()),
     Pair(36, GetTimeRequest.parser()),
     Pair(37, GetTimeResponse.parser()),
     Pair(38, SubscribeHomeAssistantStatesRequest.parser()),
@@ -257,13 +277,27 @@ val MESSAGE_PARSERS = mapOf<Int, Parser<out Any>>(
     Pair(125, NoiseEncryptionSetKeyResponse.parser()),
     Pair(126, BluetoothScannerStateResponse.parser()),
     Pair(127, BluetoothScannerSetModeRequest.parser()),
+    Pair(128, ZWaveProxyFrame.parser()),
+    Pair(129, ZWaveProxyRequest.parser()),
+    Pair(130, HomeassistantActionResponse.parser()),
+    Pair(131, ExecuteServiceResponse.parser()),
+    Pair(132, ListEntitiesWaterHeaterResponse.parser()),
+    Pair(133, WaterHeaterStateResponse.parser()),
+    Pair(134, WaterHeaterCommandRequest.parser()),
+    Pair(135, ListEntitiesInfraredResponse.parser()),
+    Pair(136, InfraredRFTransmitRawTimingsRequest.parser()),
+    Pair(137, InfraredRFReceiveEvent.parser()),
 )
+
+// Pairs are generated from the python code linked above using regex replace
+// Find: (\d+):\s+(.*?),
+// Replace: Pair\(\2::class.java, \1\),
 
 val MESSAGE_TYPES = mapOf<Class<out Any>, Int>(
     Pair(HelloRequest::class.java, 1),
     Pair(HelloResponse::class.java, 2),
-    Pair(ConnectRequest::class.java, 3),
-    Pair(ConnectResponse::class.java, 4),
+    Pair(AuthenticationRequest::class.java, 3),
+    Pair(AuthenticationResponse::class.java, 4),
     Pair(DisconnectRequest::class.java, 5),
     Pair(DisconnectResponse::class.java, 6),
     Pair(PingRequest::class.java, 7),
@@ -294,7 +328,7 @@ val MESSAGE_TYPES = mapOf<Class<out Any>, Int>(
     Pair(LightCommandRequest::class.java, 32),
     Pair(SwitchCommandRequest::class.java, 33),
     Pair(SubscribeHomeassistantServicesRequest::class.java, 34),
-    Pair(HomeassistantServiceResponse::class.java, 35),
+    Pair(HomeassistantActionRequest::class.java, 35),
     Pair(GetTimeRequest::class.java, 36),
     Pair(GetTimeResponse::class.java, 37),
     Pair(SubscribeHomeAssistantStatesRequest::class.java, 38),
@@ -386,5 +420,15 @@ val MESSAGE_TYPES = mapOf<Class<out Any>, Int>(
     Pair(NoiseEncryptionSetKeyRequest::class.java, 124),
     Pair(NoiseEncryptionSetKeyResponse::class.java, 125),
     Pair(BluetoothScannerStateResponse::class.java, 126),
-    Pair(BluetoothScannerSetModeRequest::class.java, 127)
+    Pair(BluetoothScannerSetModeRequest::class.java, 127),
+    Pair(ZWaveProxyFrame::class.java, 128),
+    Pair(ZWaveProxyRequest::class.java, 129),
+    Pair(HomeassistantActionResponse::class.java, 130),
+    Pair(ExecuteServiceResponse::class.java, 131),
+    Pair(ListEntitiesWaterHeaterResponse::class.java, 132),
+    Pair(WaterHeaterStateResponse::class.java, 133),
+    Pair(WaterHeaterCommandRequest::class.java, 134),
+    Pair(ListEntitiesInfraredResponse::class.java, 135),
+    Pair(InfraredRFTransmitRawTimingsRequest::class.java, 136),
+    Pair(InfraredRFReceiveEvent::class.java, 137),
 )

@@ -4,7 +4,6 @@ import android.util.Log
 import com.example.ava.esphome.entities.Entity
 import com.example.ava.server.Server
 import com.example.ava.server.ServerException
-import com.example.esphomeproto.api.ConnectRequest
 import com.example.esphomeproto.api.DeviceInfoRequest
 import com.example.esphomeproto.api.DeviceInfoResponse
 import com.example.esphomeproto.api.DisconnectRequest
@@ -12,7 +11,6 @@ import com.example.esphomeproto.api.HelloRequest
 import com.example.esphomeproto.api.ListEntitiesRequest
 import com.example.esphomeproto.api.PingRequest
 import com.example.esphomeproto.api.SubscribeHomeAssistantStatesRequest
-import com.example.esphomeproto.api.connectResponse
 import com.example.esphomeproto.api.disconnectResponse
 import com.example.esphomeproto.api.helloResponse
 import com.example.esphomeproto.api.listEntitiesDoneResponse
@@ -109,8 +107,6 @@ abstract class EspHomeDevice(
                 apiVersionMajor = 1
                 apiVersionMinor = 10
             })
-
-            is ConnectRequest -> sendMessage(connectResponse { })
 
             is DisconnectRequest -> {
                 sendMessage(disconnectResponse { })
