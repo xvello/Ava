@@ -3,7 +3,6 @@ package com.example.ava.ui.screens.settings
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
@@ -16,6 +15,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import timber.log.Timber
 import javax.inject.Inject
 
 @Immutable
@@ -53,7 +53,7 @@ class SettingsViewModel @Inject constructor(
         if (validateName(name).isNullOrBlank()) {
             satelliteSettingsStore.name.set(name)
         } else {
-            Log.w(TAG, "Cannot save invalid server name: $name")
+            Timber.w("Cannot save invalid server name: $name")
         }
     }
 
@@ -61,7 +61,7 @@ class SettingsViewModel @Inject constructor(
         if (validatePort(port).isNullOrBlank()) {
             satelliteSettingsStore.serverPort.set(port!!)
         } else {
-            Log.w(TAG, "Cannot save invalid server port: $port")
+            Timber.w("Cannot save invalid server port: $port")
         }
     }
 
@@ -73,7 +73,7 @@ class SettingsViewModel @Inject constructor(
         if (validateWakeWord(wakeWordId).isNullOrBlank()) {
             microphoneSettingsStore.wakeWord.set(wakeWordId)
         } else {
-            Log.w(TAG, "Cannot save invalid wake word: $wakeWordId")
+            Timber.w("Cannot save invalid wake word: $wakeWordId")
         }
     }
 
@@ -112,9 +112,5 @@ class SettingsViewModel @Inject constructor(
             context.getString(R.string.validation_voice_satellite_wake_word_invalid)
         else
             null
-    }
-
-    companion object {
-        private const val TAG = "SettingsViewModel"
     }
 }

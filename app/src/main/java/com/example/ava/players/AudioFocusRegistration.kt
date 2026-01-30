@@ -1,11 +1,11 @@
 package com.example.ava.players
 
 import android.media.AudioManager
-import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.audio.AudioFocusRequestCompat
 import androidx.media3.common.audio.AudioManagerCompat
 import androidx.media3.common.util.UnstableApi
+import timber.log.Timber
 
 @UnstableApi
 class AudioFocusRegistration(
@@ -22,14 +22,14 @@ class AudioFocusRegistration(
                 .setOnAudioFocusChangeListener { }
                 .build()
             val rq = AudioManagerCompat.requestAudioFocus(audioManager, focusRequest!!)
-            Log.d(TAG, "Audio focus request result: $rq")
+            Timber.d("Audio focus request result: $rq")
         }
     }
 
     fun abandon() {
         if (focusRequest != null) {
             val rq = AudioManagerCompat.abandonAudioFocusRequest(audioManager, focusRequest!!)
-            Log.d(TAG, "Audio focus abandon result: $rq")
+            Timber.d("Audio focus abandon result: $rq")
             focusRequest = null
         }
     }
@@ -39,8 +39,6 @@ class AudioFocusRegistration(
     }
 
     companion object {
-        private const val TAG = "AudioFocusRegistration"
-
         fun request(
             audioManager: AudioManager,
             audioAttributes: AudioAttributes,

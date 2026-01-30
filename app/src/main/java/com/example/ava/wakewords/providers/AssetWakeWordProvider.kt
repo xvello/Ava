@@ -1,7 +1,6 @@
 package com.example.ava.wakewords.providers
 
 import android.content.res.AssetManager
-import android.util.Log
 import com.example.ava.wakewords.models.WakeWord
 import com.example.ava.wakewords.models.WakeWordWithId
 import kotlinx.coroutines.CoroutineDispatcher
@@ -10,6 +9,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
+import timber.log.Timber
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
@@ -31,7 +31,7 @@ class AssetWakeWordProvider(
                     val id = asset.substring(0, asset.lastIndexOf(".json"))
                     add(WakeWordWithId(id, wakeWord) { loadModel(wakeWord.model) })
                 }.onFailure {
-                    Log.e(TAG, "Error loading wake word: $asset", it)
+                    Timber.e(it, "Error loading wake word: $asset")
                 }
             }
         }
@@ -55,7 +55,6 @@ class AssetWakeWordProvider(
     }
 
     companion object {
-        private const val TAG = "AssetWakeWordProvider"
         const val DEFAULT_WAKE_WORD_PATH = "wakeWords"
     }
 }

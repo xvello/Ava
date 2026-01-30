@@ -1,7 +1,6 @@
 package com.example.ava.esphome.voicesatellite
 
 import android.Manifest
-import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.example.ava.audio.MicrophoneInput
 import com.example.ava.wakewords.microwakeword.MicroWakeWord
@@ -14,6 +13,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.yield
+import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 
 class VoiceSatelliteAudioInput(
@@ -119,13 +119,9 @@ class VoiceSatelliteAudioInput(
                 runCatching {
                     add(MicroWakeWord.fromWakeWord(it))
                 }.onFailure {
-                    Log.e(TAG, "Error loading wake word: $id", it)
+                    Timber.e(it, "Error loading wake word: $id")
                 }
             }
         }
-    }
-
-    companion object {
-        private const val TAG = "VoiceSatelliteAudioInput"
     }
 }

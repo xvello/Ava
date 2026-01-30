@@ -43,8 +43,4 @@ class MicroWakeWordDetector(private val wakeWords: List<MicroWakeWord>) : AutoCl
         for (model in wakeWords)
             model.close()
     }
-
-    companion object {
-        private const val TAG = "WakeWordDetector"
-    }
 }

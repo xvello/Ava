@@ -1,12 +1,12 @@
 package com.example.ava.server
 
-import android.util.Log
 import com.example.esphomeproto.AsynchronousCodedChannel
 import com.google.protobuf.MessageLite
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import timber.log.Timber
 import java.io.IOException
 import java.nio.channels.AsynchronousSocketChannel
 import java.util.concurrent.atomic.AtomicBoolean
@@ -25,7 +25,7 @@ class ClientConnection(socket: AsynchronousSocketChannel) : AutoCloseable {
             if (it !is IOException) throw it
             // Exception is expected if client was manually closed
             if (!isClosed.get())
-                Log.e(TAG, "Error reading from socket", it)
+                Timber.e(it, "Error reading from socket")
         }
 
     suspend fun sendMessage(message: MessageLite) {
@@ -36,7 +36,7 @@ class ClientConnection(socket: AsynchronousSocketChannel) : AutoCloseable {
             } catch (e: IOException) {
                 // Exception is expected if client was manually closed
                 if (!isClosed.get())
-                    Log.e(TAG, "Error writing to socket", e)
+                    Timber.e(e, "Error writing to socket")
             }
         }
     }
@@ -44,9 +44,5 @@ class ClientConnection(socket: AsynchronousSocketChannel) : AutoCloseable {
     override fun close() {
         if (isClosed.compareAndSet(false, true))
             channel.close()
-    }
-
-    companion object {
-        const val TAG = "ClientConnection"
     }
 }

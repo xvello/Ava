@@ -1,6 +1,5 @@
 package com.example.ava.esphome
 
-import android.util.Log
 import com.example.ava.esphome.entities.Entity
 import com.example.ava.server.Server
 import com.example.ava.server.ServerException
@@ -31,6 +30,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.job
+import timber.log.Timber
 import kotlin.coroutines.CoroutineContext
 
 interface EspHomeState
@@ -94,7 +94,7 @@ abstract class EspHomeDevice(
         }.launchIn(scope)
 
     private suspend fun handleMessageInternal(message: MessageLite) {
-        Log.d(TAG, "Received message: ${message.javaClass.simpleName} $message")
+        Timber.d("Received message: ${message.javaClass.simpleName} $message")
         handleMessage(message)
     }
 
@@ -131,7 +131,7 @@ abstract class EspHomeDevice(
     }
 
     protected suspend fun sendMessage(message: MessageLite) {
-        Log.d(TAG, "Sending message: ${message.javaClass.simpleName} $message")
+        Timber.d("Sending message: ${message.javaClass.simpleName} $message")
         server.sendMessage(message)
     }
 
@@ -147,9 +147,5 @@ abstract class EspHomeDevice(
     override fun close() {
         scope.cancel()
         server.close()
-    }
-
-    companion object {
-        val TAG: String = this::class.java.simpleName
     }
 }

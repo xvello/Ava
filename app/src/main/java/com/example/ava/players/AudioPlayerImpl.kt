@@ -1,12 +1,12 @@
 package com.example.ava.players
 
 import android.media.AudioManager
-import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import timber.log.Timber
 
 /**
  * Implementation of AudioPlayer backed by an ExoPlayer.
@@ -66,12 +66,12 @@ class AudioPlayerImpl(
             for (mediaUri in mediaUris) {
                 if (mediaUri.isNotEmpty()) {
                     player.addMediaItem(MediaItem.fromUri(mediaUri))
-                } else Log.w(TAG, "Ignoring empty media uri")
+                } else Timber.w("Ignoring empty media uri")
             }
             player.playWhenReady = true
             player.prepare()
         }.onFailure {
-            Log.e(TAG, "Error playing media $mediaUris", it)
+            Timber.e(it, "Error playing media $mediaUris")
             onCompletion()
             close()
         }
@@ -93,7 +93,7 @@ class AudioPlayerImpl(
 
     private fun getPlayerListener(onCompletion: () -> Unit) = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
-            Log.d(TAG, "Playback state changed to $playbackState")
+            Timber.d("Playback state changed to $playbackState")
             // If there's a playback error then the player state will return to idle
             if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
                 onCompletion()
@@ -118,9 +118,5 @@ class AudioPlayerImpl(
         focusRegistration?.close()
         focusRegistration = null
         _state.value = AudioPlayerState.IDLE
-    }
-
-    companion object {
-        private const val TAG = "AudioPlayer"
     }
 }

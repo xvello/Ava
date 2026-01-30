@@ -4,8 +4,8 @@ import android.Manifest
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.util.Log
 import androidx.annotation.RequiresPermission
+import timber.log.Timber
 import java.nio.ByteBuffer
 
 class MicrophoneInput(
@@ -26,10 +26,10 @@ class MicrophoneInput(
             audioRecord = createAudioRecord()
         }
         if (!isRecording) {
-            Log.d(TAG, "Starting microphone")
+            Timber.d("Starting microphone")
             audioRecord?.startRecording()
         } else {
-            Log.w(TAG, "Microphone already started")
+            Timber.w("Microphone already started")
         }
     }
 
@@ -70,7 +70,6 @@ class MicrophoneInput(
     }
 
     companion object {
-        const val TAG = "MicrophoneInput"
         const val DEFAULT_AUDIO_SOURCE = MediaRecorder.AudioSource.VOICE_RECOGNITION
         const val DEFAULT_SAMPLE_RATE_IN_HZ = 16000
         const val DEFAULT_CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO

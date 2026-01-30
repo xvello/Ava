@@ -5,7 +5,6 @@ import android.content.Intent
 import android.media.AudioManager
 import android.os.Binder
 import android.os.IBinder
-import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.AudioAttributes
@@ -43,6 +42,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 
@@ -74,7 +74,7 @@ class VoiceSatelliteService() : LifecycleService() {
     fun stopVoiceSatellite() {
         val satellite = _voiceSatellite.getAndUpdate { null }
         if (satellite != null) {
-            Log.d(TAG, "Stopping voice satellite")
+            Timber.d("Stopping voice satellite")
             satellite.close()
             voiceSatelliteNsd.getAndSet(null)?.unregister(this)
             wifiWakeLock.release()
@@ -103,7 +103,7 @@ class VoiceSatelliteService() : LifecycleService() {
         lifecycleScope.launch {
             // already started?
             if (_voiceSatellite.value == null) {
-                Log.d(TAG, "Starting voice satellite")
+                Timber.d("Starting voice satellite")
                 startForeground(
                     2,
                     createVoiceSatelliteServiceNotification(

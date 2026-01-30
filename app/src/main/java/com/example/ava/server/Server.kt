@@ -1,6 +1,5 @@
 package com.example.ava.server
 
-import android.util.Log
 import com.example.ava.utils.acceptAsync
 import com.google.protobuf.MessageLite
 import kotlinx.coroutines.CoroutineDispatcher
@@ -15,6 +14,7 @@ import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.net.InetSocketAddress
 import java.nio.channels.AsynchronousServerSocketChannel
 import java.nio.channels.AsynchronousSocketChannel
@@ -35,7 +35,7 @@ class Server(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : Aut
         }
         .catch {
             if (it is ServerException) throw it
-            Log.e(TAG, "Client connection error", it)
+            Timber.e(it, "Client connection error")
         }
         .flowOn(dispatcher)
 
@@ -71,7 +71,7 @@ class Server(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : Aut
     private fun disconnectClient(client: ClientConnection) {
         client.close()
         val updated = connection.compareAndSet(client, null)
-        Log.d(TAG, "Disconnected client: $updated")
+        Timber.d("Disconnected client: $updated")
     }
 
     suspend fun sendMessage(message: MessageLite) = withContext(dispatcher) {
@@ -84,7 +84,6 @@ class Server(private val dispatcher: CoroutineDispatcher = Dispatchers.IO) : Aut
     }
 
     companion object {
-        const val TAG = "Server"
         const val DEFAULT_SERVER_PORT = 6053
     }
 }

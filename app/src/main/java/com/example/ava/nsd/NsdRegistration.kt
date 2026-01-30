@@ -3,8 +3,8 @@ package com.example.ava.nsd
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
-import android.util.Log
 import androidx.core.content.ContextCompat
+import timber.log.Timber
 
 class NsdRegistration(
     var name: String,
@@ -25,19 +25,19 @@ class NsdRegistration(
         override fun onServiceRegistered(nsdServiceInfo: NsdServiceInfo) {
             // Name may have been automatically changed to resolve a conflict
             name = nsdServiceInfo.serviceName
-            Log.d(TAG, "Service registered: $name")
+            Timber.d("Service registered: $name")
         }
 
         override fun onRegistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-            Log.e(TAG, "Service registration failed: $errorCode")
+            Timber.e("Service registration failed: $errorCode")
         }
 
         override fun onServiceUnregistered(arg0: NsdServiceInfo) {
-            Log.d(TAG, "Service unregistered: $name")
+            Timber.d("Service unregistered: $name")
         }
 
         override fun onUnregistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-            Log.e(TAG, "Service unregistration failed: $errorCode")
+            Timber.e("Service unregistration failed: $errorCode")
         }
     }
 
@@ -47,7 +47,7 @@ class NsdRegistration(
                 registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Service registration failed", e)
+            Timber.e(e, "Service registration failed")
         }
     }
 
@@ -57,11 +57,7 @@ class NsdRegistration(
                 unregisterService(registrationListener)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Service unregistration failed", e)
+            Timber.e(e, "Service unregistration failed")
         }
-    }
-
-    companion object {
-        const val TAG = "NsdRegistration"
     }
 }

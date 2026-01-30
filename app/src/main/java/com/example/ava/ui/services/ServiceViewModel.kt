@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ava.services.VoiceSatelliteService
@@ -17,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -60,7 +60,7 @@ class ServiceViewModel @Inject constructor(
             Context.BIND_AUTO_CREATE
         )
         if (!bound)
-            Log.e(TAG, "Cannot bind to VoiceAssistantService")
+            Timber.e("Cannot bind to VoiceAssistantService")
         return serviceConnection
     }
 
@@ -73,9 +73,5 @@ class ServiceViewModel @Inject constructor(
             if (autoStart)
                 _satellite.dropWhile { it == null }.first()?.startVoiceSatellite()
         }
-    }
-
-    companion object {
-        private const val TAG = "ServiceViewModel"
     }
 }

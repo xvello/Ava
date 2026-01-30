@@ -4,7 +4,6 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.example.ava.utils.copyTo
 import com.example.ava.wakewords.models.WakeWord
@@ -15,6 +14,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
+import timber.log.Timber
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -45,7 +45,7 @@ class DocumentTreeWakeWordProvider(
                             ) { loadModel(wakeWord.model) })
                     }
                 }.onFailure {
-                    Log.e(TAG, "Error loading wake word: $name", it)
+                    Timber.e(it, "Error loading wake word: $name")
                 }
             }
         }
@@ -102,8 +102,4 @@ class DocumentTreeWakeWordProvider(
                 return null
             }
         }
-
-    companion object {
-        private const val TAG = "DocumentTreeWakeWordProvider"
-    }
 }

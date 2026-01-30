@@ -7,7 +7,7 @@ import android.content.Context.WIFI_SERVICE
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.PowerManager
-import android.util.Log
+import timber.log.Timber
 
 class WifiWakeLock {
     private lateinit var wakeLock: PowerManager.WakeLock
@@ -45,7 +45,7 @@ class WifiWakeLock {
         }
         wakeLock.acquire()
         wifiLock.acquire()
-        Log.d(TAG, "Acquired wake locks")
+        Timber.d("Acquired wake locks")
     }
 
     fun release() {
@@ -56,10 +56,6 @@ class WifiWakeLock {
             wakeLock.release()
         if (wifiLock.isHeld)
             wifiLock.release()
-        Log.d(TAG, "Released wake locks")
-    }
-
-    companion object {
-        private const val TAG = "WifiWakeLock"
+        Timber.d("Released wake locks")
     }
 }

@@ -1,6 +1,5 @@
 package com.example.ava.esphome.voicesatellite
 
-import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import com.example.ava.esphome.EspHomeState
@@ -11,6 +10,7 @@ import com.example.esphomeproto.api.voiceAssistantAudio
 import com.example.esphomeproto.api.voiceAssistantRequest
 import com.google.protobuf.ByteString
 import com.google.protobuf.MessageLite
+import timber.log.Timber
 
 /**
  * Tracks the state of a voice pipeline run.
@@ -104,7 +104,7 @@ class VoicePipeline(
             }
 
             else -> {
-                Log.d(TAG, "Unhandled voice assistant event: ${voiceEvent.eventType}")
+                Timber.d("Unhandled voice assistant event: ${voiceEvent.eventType}")
             }
         }
     }
@@ -141,16 +141,12 @@ class VoicePipeline(
             return
         if (!isRunning) {
             micAudioBuffer.add(audio)
-            Log.d(TAG, "Buffering mic audio, current size: ${micAudioBuffer.size}")
+            Timber.d("Buffering mic audio, current size: ${micAudioBuffer.size}")
         } else {
             while (micAudioBuffer.isNotEmpty()) {
                 sendMessage(voiceAssistantAudio { data = micAudioBuffer.removeFirst() })
             }
             sendMessage(voiceAssistantAudio { data = audio })
         }
-    }
-
-    companion object {
-        private const val TAG = "VoicePipeline"
     }
 }

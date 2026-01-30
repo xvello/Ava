@@ -1,8 +1,8 @@
 package com.example.ava.wakewords.microwakeword
 
-import android.util.Log
 import com.example.ava.wakewords.models.WakeWordWithId
 import org.tensorflow.lite.Interpreter
+import timber.log.Timber
 import java.nio.ByteBuffer
 
 private const val STRIDE = 3
@@ -63,7 +63,7 @@ class MicroWakeWord(
 
     private fun isWakeWordDetected(probability: Float): Boolean {
         if (probability > 0.3)
-            Log.d(TAG, "Probability: $probability")
+            Timber.d("Probability: $probability")
 
         if (probabilities.size == slidingWindowSize)
             probabilities.removeFirst()
@@ -76,7 +76,6 @@ class MicroWakeWord(
     }
 
     companion object {
-        private const val TAG = "MicroWakeWord"
         suspend fun fromWakeWord(wakeWord: WakeWordWithId): MicroWakeWord = MicroWakeWord(
             id = wakeWord.id,
             wakeWord = wakeWord.wakeWord.wake_word,

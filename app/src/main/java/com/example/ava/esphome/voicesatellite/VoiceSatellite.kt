@@ -1,7 +1,6 @@
 package com.example.ava.esphome.voicesatellite
 
 import android.Manifest
-import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.example.ava.esphome.Connected
 import com.example.ava.esphome.EspHomeDevice
@@ -30,6 +29,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import kotlin.coroutines.CoroutineContext
 
 data object Listening : EspHomeState
@@ -120,14 +120,14 @@ class VoiceSatellite(
             is VoiceAssistantSetConfiguration -> {
                 val activeWakeWords =
                     message.activeWakeWordsList.filter { audioInput.availableWakeWords.any { wakeWord -> wakeWord.id == it } }
-                Log.d(TAG, "Setting active wake words: $activeWakeWords")
+                Timber.d("Setting active wake words: $activeWakeWords")
                 if (activeWakeWords.isNotEmpty()) {
                     audioInput.setActiveWakeWords(activeWakeWords)
                 }
                 val ignoredWakeWords =
                     message.activeWakeWordsList.filter { !activeWakeWords.contains(it) }
                 if (ignoredWakeWords.isNotEmpty())
-                    Log.w(TAG, "Ignoring wake words: $ignoredWakeWords")
+                    Timber.w("Ignoring wake words: $ignoredWakeWords")
             }
 
             is VoiceAssistantAnnounceRequest -> handleAnnouncement(
@@ -145,7 +145,7 @@ class VoiceSatellite(
     }
 
     private suspend fun handleTimerMessage(timerEvent: VoiceAssistantTimerEventResponse) {
-        Log.d(TAG, "Timer event: ${timerEvent.eventType}")
+        Timber.d("Timer event: ${timerEvent.eventType}")
         when (timerEvent.eventType) {
             VoiceAssistantTimerEvent.VOICE_ASSISTANT_TIMER_FINISHED -> {
                 if (!timerFinished) {
@@ -215,7 +215,7 @@ class VoiceSatellite(
         wakeWordPhrase: String = "",
         isContinueConversation: Boolean = false
     ) {
-        Log.d(TAG, "Wake satellite")
+        Timber.d("Wake satellite")
         player.duck()
         pipeline = createPipeline()
         // Start mic audio streaming as early as possible to minimise
@@ -243,7 +243,7 @@ class VoiceSatellite(
     )
 
     private suspend fun stopSatellite() {
-        Log.d(TAG, "Stop satellite")
+        Timber.d("Stop satellite")
         pipeline = null
         audioInput.isStreaming = false
         player.ttsPlayer.stop()
@@ -252,7 +252,7 @@ class VoiceSatellite(
     }
 
     private fun stopTimer() {
-        Log.d(TAG, "Stop timer")
+        Timber.d("Stop timer")
         if (timerFinished) {
             timerFinished = false
             player.ttsPlayer.stop()
@@ -260,10 +260,10 @@ class VoiceSatellite(
     }
 
     private suspend fun onTtsFinished(continueConversation: Boolean) {
-        Log.d(TAG, "TTS finished")
+        Timber.d("TTS finished")
         sendMessage(voiceAssistantAnnounceFinished { })
         if (continueConversation) {
-            Log.d(TAG, "Continuing conversation")
+            Timber.d("Continuing conversation")
             wakeSatellite(isContinueConversation = true)
         } else {
             player.unDuck()
@@ -285,9 +285,5 @@ class VoiceSatellite(
     override fun close() {
         super.close()
         player.close()
-    }
-
-    companion object {
-        private const val TAG = "VoiceSatellite"
     }
 }
