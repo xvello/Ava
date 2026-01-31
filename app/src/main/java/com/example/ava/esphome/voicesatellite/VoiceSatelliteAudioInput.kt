@@ -115,9 +115,9 @@ class VoiceSatelliteAudioInput(
         wakeWords: Map<String, WakeWordWithId>
     ): List<MicroWakeWord> = buildList {
         for (id in ids) {
-            wakeWords.get(id)?.let {
+            wakeWords[id]?.let { wakeWord ->
                 runCatching {
-                    add(MicroWakeWord.fromWakeWord(it))
+                    add(MicroWakeWord.fromWakeWord(wakeWord))
                 }.onFailure {
                     Timber.e(it, "Error loading wake word: $id")
                 }
