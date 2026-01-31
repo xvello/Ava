@@ -1,6 +1,5 @@
 package com.example.ava.ui.screens.settings
 
-import DocumentTreeSetting
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -10,6 +9,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ava.R
+import com.example.ava.ui.screens.settings.components.DocumentTreeSetting
 import com.example.ava.ui.screens.settings.components.IntSetting
 import com.example.ava.ui.screens.settings.components.SelectSetting
 import com.example.ava.ui.screens.settings.components.SwitchSetting

@@ -1,3 +1,5 @@
+package com.example.ava.ui.screens.settings.components
+
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContract
@@ -9,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.documentfile.provider.DocumentFile
-import com.example.ava.ui.screens.settings.components.SettingItem
 
 @Composable
 fun DocumentTreeSetting(
