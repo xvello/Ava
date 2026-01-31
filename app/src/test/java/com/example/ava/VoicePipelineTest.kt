@@ -59,7 +59,7 @@ class VoicePipelineTest {
             ended = {}
         )
 
-        val audioData = List(3, { ByteString.copyFrom(byteArrayOf(it.toByte())) })
+        val audioData = List(3) { ByteString.copyFrom(byteArrayOf(it.toByte())) }
         // Should buffer the audio, and not send it, until a VOICE_ASSISTANT_RUN_START event is received
         runBlocking {
             audioData.take(2).forEach {
