@@ -18,7 +18,7 @@ import javax.inject.Singleton
 // Instead a random string of bytes should be generated and persisted to the settings.
 // The default value below should only used to detect when a random value hasn't been
 // generated and persisted yet and should be replaced with a random value when it is.
-val DEFAULT_MAC_ADDRESS = "00:00:00:00:00:00"
+const val DEFAULT_MAC_ADDRESS = "00:00:00:00:00:00"
 
 @Serializable
 data class VoiceSatelliteSettings(
