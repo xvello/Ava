@@ -5,8 +5,6 @@ import org.tensorflow.lite.Interpreter
 import timber.log.Timber
 import java.nio.ByteBuffer
 
-private const val STRIDE = 3
-
 class MicroWakeWord(
     val id: String,
     val wakeWord: String,
@@ -25,7 +23,7 @@ class MicroWakeWord(
 
         val inputDetails = interpreter.getInputTensor(0)
         val inputQuantParams = inputDetails.quantizationParams()
-        inputTensorBuffer = TensorBuffer.Companion.create(
+        inputTensorBuffer = TensorBuffer.create(
             inputDetails.dataType(),
             inputDetails.shape(),
             inputQuantParams.scale,
@@ -42,8 +40,6 @@ class MicroWakeWord(
     fun processAudioFeatures(features: FloatArray): Boolean {
         if (features.isEmpty())
             return false
-        if (features.size * STRIDE != inputTensorBuffer.flatSize)
-            error("Unexpected feature size ${features.size} for stride $STRIDE and tensor size ${inputTensorBuffer.flatSize}")
 
         inputTensorBuffer.put(features)
         if (!inputTensorBuffer.isComplete)
