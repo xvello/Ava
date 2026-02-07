@@ -13,6 +13,12 @@ import timber.log.Timber
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
+import kotlin.io.path.Path
+import kotlin.io.path.extension
+import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.pathString
+
+private const val EXTENSION_JSON = "json"
 
 @OptIn(ExperimentalSerializationApi::class)
 class AssetWakeWordProvider(
@@ -21,15 +27,18 @@ class AssetWakeWordProvider(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : WakeWordProvider {
     override suspend fun get(): List<WakeWordWithId> = withContext(dispatcher) {
-        val assetsList = assets.list(path) ?: return@withContext emptyList()
+        val assetsList = assets.list(path)?.map { Path(path, it) } ?: return@withContext emptyList()
         val wakeWords = buildList {
-            for (asset in assetsList.filter { it.endsWith(".json") }) {
+            for (asset in assetsList.filter { it.extension == EXTENSION_JSON }) {
                 runCatching {
-                    val wakeWord = assets.open("$path/$asset").use {
+                    val wakeWord = assets.open(asset.pathString).use {
                         Json.decodeFromStream<WakeWord>(it)
                     }
-                    val id = asset.substring(0, asset.lastIndexOf(".json"))
-                    add(WakeWordWithId(id, wakeWord) { loadModel(wakeWord.model) })
+                    val id = asset.nameWithoutExtension
+                    val modelPath = Path(path, wakeWord.model)
+                    add(WakeWordWithId(id, wakeWord) {
+                        loadModel(modelPath.pathString)
+                    })
                 }.onFailure {
                     Timber.e(it, "Error loading wake word: $asset")
                 }
@@ -38,8 +47,12 @@ class AssetWakeWordProvider(
         return@withContext wakeWords
     }
 
-    private suspend fun loadModel(model: String): ByteBuffer = withContext(dispatcher) {
-        val modelFileDescriptor = assets.openFd("$path/$model")
+    /**
+     * Loads a TFLite model from the assets directory into a MappedByteBuffer.
+     * @param modelPath The absolute path to the model file in the assets directory.
+     */
+    private suspend fun loadModel(modelPath: String): ByteBuffer = withContext(dispatcher) {
+        val modelFileDescriptor = assets.openFd(modelPath)
         modelFileDescriptor.use { descriptor ->
             FileInputStream(descriptor.fileDescriptor).use { stream ->
                 val fileChannel = stream.channel
