@@ -1,8 +1,7 @@
 package com.example.ava
 
 import com.example.ava.esphome.voicesatellite.VoicePipeline
-import com.example.ava.players.AudioPlayer
-import com.example.ava.players.AudioPlayerState
+import com.example.ava.stubs.StubAudioPlayer
 import com.example.esphomeproto.api.VoiceAssistantAudio
 import com.example.esphomeproto.api.VoiceAssistantEvent
 import com.example.esphomeproto.api.VoiceAssistantRequest
@@ -10,20 +9,8 @@ import com.example.esphomeproto.api.voiceAssistantEventData
 import com.example.esphomeproto.api.voiceAssistantEventResponse
 import com.google.protobuf.ByteString
 import com.google.protobuf.MessageLite
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
-
-open class StubAudioPlayer : AudioPlayer {
-    override val state = MutableStateFlow(AudioPlayerState.IDLE)
-    override var volume = 1f
-    override fun init() {}
-    override fun play(mediaUris: Iterable<String>, onCompletion: () -> Unit) {}
-    override fun pause() {}
-    override fun unpause() {}
-    override fun stop() {}
-    override fun close() {}
-}
 
 class VoicePipelineTest {
     @Test
