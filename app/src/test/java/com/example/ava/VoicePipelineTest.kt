@@ -14,6 +14,26 @@ import org.junit.Test
 
 class VoicePipelineTest {
     @Test
+    fun should_fire_changed_callbacks_on_start() {
+        var listeningChangedCalled = false
+        var stateChangedCalled = false
+        val pipeline = VoicePipeline(
+            player = StubAudioPlayer(),
+            sendMessage = {},
+            listeningChanged = { listeningChangedCalled = true },
+            stateChanged = { stateChangedCalled = true },
+            ended = {}
+        )
+
+        runBlocking {
+            pipeline.start()
+        }
+
+        assert(listeningChangedCalled)
+        assert(stateChangedCalled)
+    }
+
+    @Test
     fun should_send_start_request() {
         val sentMessages = mutableListOf<MessageLite>()
         val pipeline = VoicePipeline(
