@@ -1,5 +1,9 @@
 package com.example.ava
 
+import com.example.ava.esphome.Connected
+import com.example.ava.esphome.EspHomeState
+import com.example.ava.esphome.voicesatellite.Listening
+import com.example.ava.esphome.voicesatellite.Responding
 import com.example.ava.esphome.voicesatellite.VoicePipeline
 import com.example.ava.stubs.StubAudioPlayer
 import com.example.esphomeproto.api.VoiceAssistantAudio
@@ -91,7 +95,7 @@ class VoicePipelineTest {
     }
 
     @Test
-    fun should_fire_ended_with_continueConversation() {
+    fun when_continue_conversation_is_true_should_fire_ended_with_continueConversation() {
         var continueConversation: Boolean? = null
         val pipeline = VoicePipeline(
             player = StubAudioPlayer(),
@@ -115,7 +119,7 @@ class VoicePipelineTest {
     }
 
     @Test
-    fun should_stream_tts() {
+    fun when_tts_start_streaming_is_true_should_stream_tts() {
         val ttsStreamUrl = "tts_stream"
         val notTtsStreamUrl = "not_tts_stream"
         var playbackUrl: String? = null
@@ -150,7 +154,7 @@ class VoicePipelineTest {
     }
 
     @Test
-    fun should_not_stream_tts() {
+    fun when_tts_start_streaming_not_received_should_not_stream_tts() {
         val ttsStreamUrl = "tts_stream"
         val notTtsStreamUrl = "not_tts_stream"
         var playbackUrl: String? = null
@@ -181,5 +185,86 @@ class VoicePipelineTest {
         }
 
         assert(playbackUrl == notTtsStreamUrl)
+    }
+
+    @Test
+    fun when_tts_not_played_should_change_state_on_pipeline_end() {
+        var listening = false
+        var state: EspHomeState = Connected
+        val pipeline = VoicePipeline(
+            player = StubAudioPlayer(),
+            sendMessage = {},
+            listeningChanged = { listening = it },
+            stateChanged = { state = it },
+            ended = {}
+        )
+
+        runBlocking {
+            pipeline.start()
+        }
+        assert(listening)
+        assert(state == Listening)
+        assert(pipeline.state == Listening)
+
+        pipeline.handleEvent(voiceAssistantEventResponse {
+            eventType = VoiceAssistantEvent.VOICE_ASSISTANT_RUN_END
+        })
+
+        assert(!listening)
+        assert(state == Connected)
+        assert(pipeline.state == Connected)
+    }
+
+    @Test
+    fun when_tts_playing_should_change_state_when_tts_played() {
+        var listening = false
+        var state: EspHomeState = Connected
+        val player = object : StubAudioPlayer() {
+            lateinit var onCompletion: () -> Unit
+            override fun play(mediaUri: String, onCompletion: () -> Unit) {
+                this.onCompletion = onCompletion
+            }
+        }
+        val pipeline = VoicePipeline(
+            player = player,
+            sendMessage = {},
+            listeningChanged = { listening = it },
+            stateChanged = { state = it },
+            ended = {}
+        )
+
+        runBlocking {
+            pipeline.start()
+        }
+        // Should change the pipeline state to Responding
+        pipeline.handleEvent(voiceAssistantEventResponse {
+            eventType = VoiceAssistantEvent.VOICE_ASSISTANT_TTS_START
+        })
+
+        assert(!listening)
+        assert(state == Responding)
+        assert(pipeline.state == Responding)
+
+        // Start TTS playback
+        pipeline.handleEvent(voiceAssistantEventResponse {
+            eventType = VoiceAssistantEvent.VOICE_ASSISTANT_TTS_END
+            data += voiceAssistantEventData { name = "url"; value = "tts_stream" }
+        })
+
+        // Pipeline state should not change on VOICE_ASSISTANT_RUN_END if tts playback hasn't ended yet
+        pipeline.handleEvent(voiceAssistantEventResponse {
+            eventType = VoiceAssistantEvent.VOICE_ASSISTANT_RUN_END
+        })
+
+        assert(!listening)
+        assert(state == Responding)
+        assert(pipeline.state == Responding)
+
+        player.onCompletion()
+
+        // Now state should change
+        assert(!listening)
+        assert(state == Connected)
+        assert(pipeline.state == Connected)
     }
 }
